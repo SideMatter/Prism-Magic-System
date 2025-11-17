@@ -24,24 +24,106 @@ export default function Home() {
   const [filteredSpells, setFilteredSpells] = useState<SpellWithPrism[]>([]);
   const [selectedSpell, setSelectedSpell] = useState<SpellWithPrism | null>(null);
   const [loading, setLoading] = useState(false);
+  const [lastCacheTimestamp, setLastCacheTimestamp] = useState<string>("");
+
+  // Load spells from API
+  const loadSpells = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
+    try {
+      const response = await fetch("/api/spells", {
+        cache: 'no-store', // Always fetch fresh data
+      });
+      const data = await response.json();
+      const cacheTimestamp = response.headers.get('X-Cache-Timestamp') || "";
+      
+      setSpells(data);
+      setFilteredSpells(data);
+      setLastCacheTimestamp(cacheTimestamp);
+      
+      // Update selected spell if it exists
+      if (selectedSpell) {
+        const updatedSpell = data.find((s: SpellWithPrism) => s.name === selectedSpell.name);
+        if (updatedSpell) {
+          setSelectedSpell(updatedSpell);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading spells:", error);
+    } finally {
+      if (showLoading) setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    // Load spells from API
-    const loadSpells = async () => {
-      setLoading(true);
-      try {
-        const response = await fetch("/api/spells");
-        const data = await response.json();
-        setSpells(data);
-        setFilteredSpells(data);
-      } catch (error) {
-        console.error("Error loading spells:", error);
-      } finally {
-        setLoading(false);
+    // Initial load
+    loadSpells();
+    
+    // Reload when page becomes visible (user navigates back from admin)
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log("Page visible, reloading spells...");
+        loadSpells(false); // Don't show loading spinner on background refresh
       }
     };
-    loadSpells();
-  }, []);
+    
+    // Reload when window gains focus
+    const handleFocus = () => {
+      console.log("Window focused, reloading spells...");
+      loadSpells(false);
+    };
+    
+    // Add storage event listener to detect changes from other tabs/pages
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'spell-update-trigger') {
+        console.log("Spell update detected from admin, reloading...");
+        loadSpells(false);
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Poll for updates more frequently (every 3 seconds for better UX)
+    const interval = setInterval(async () => {
+      try {
+        const response = await fetch("/api/spells", {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache',
+          }
+        });
+        const cacheTimestamp = response.headers.get('X-Cache-Timestamp') || "";
+        const data = await response.json();
+        
+        // Always update if timestamp changed (even if it seems older due to server time differences)
+        if (cacheTimestamp !== lastCacheTimestamp) {
+          console.log(`Cache timestamp changed (${lastCacheTimestamp} → ${cacheTimestamp}), updating spells...`);
+          setSpells(data);
+          setFilteredSpells(data);
+          
+          // Update selected spell if it exists (using functional update to avoid dependency)
+          setSelectedSpell((current) => {
+            if (!current) return current;
+            const updatedSpell = data.find((s: SpellWithPrism) => s.name === current.name);
+            return updatedSpell || current;
+          });
+          
+          setLastCacheTimestamp(cacheTimestamp);
+        }
+      } catch (error) {
+        // Silently fail on polling errors
+        console.error("Error polling for updates:", error);
+      }
+    }, 3000); // Check every 3 seconds for faster updates
+    
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [lastCacheTimestamp]); // Removed selectedSpell from dependencies to prevent infinite loop
 
   useEffect(() => {
     if (!searchQuery.trim()) {

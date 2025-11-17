@@ -1,14 +1,16 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
+import { storage, getMappingsTimestamp } from "@/lib/storage";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const SPELLS_FILE = path.join(DATA_DIR, "spells.json");
 const MAPPINGS_FILE = path.join(DATA_DIR, "spell-prism-mappings.json");
 
-// Cache for spells (refresh every hour)
+// Cache for spells (refresh every hour, or when invalidated)
 let spellsCache: any[] | null = null;
 let cacheTimestamp = 0;
+let lastMappingsTimestamp = 0; // Track the last known mappings timestamp
 const CACHE_DURATION = 60 * 60 * 1000; // 1 hour
 
 // Ensure data directory exists
@@ -16,17 +18,84 @@ if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-// Load spell-prism mappings
-function loadMappings(): Record<string, string> {
-  if (!fs.existsSync(MAPPINGS_FILE)) {
-    return {};
-  }
+// Normalize spell name for matching (case-insensitive, handle variations)
+function normalizeSpellName(name: string): string {
+  if (!name) return '';
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, ' ') // Normalize whitespace
+    .replace(/[''"]/g, "'") // Normalize different apostrophe types
+    .replace(/[–—]/g, '-') // Normalize different dash types
+    .replace(/[^\w\s'\-]/g, ''); // Remove special characters but keep apostrophes and hyphens
+}
+
+// Load spell-prism mappings with normalized keys for better matching
+async function loadMappings(): Promise<{ original: Record<string, string>; normalized: Map<string, string> }> {
   try {
-    const data = fs.readFileSync(MAPPINGS_FILE, "utf-8");
-    return JSON.parse(data);
-  } catch {
-    return {};
+    let original = await storage.loadMappings();
+    console.log(`Loaded ${Object.keys(original).length} mappings from storage`);
+    
+    // If no mappings exist in storage, try to migrate from file system
+    if (Object.keys(original).length === 0 && fs.existsSync(MAPPINGS_FILE)) {
+      try {
+        const fileMappings = JSON.parse(fs.readFileSync(MAPPINGS_FILE, "utf-8"));
+        const fileCount = Object.keys(fileMappings).length;
+        if (fileCount > 0) {
+          console.log(`⚠ No mappings in storage. Migrating ${fileCount} spell mappings from file system to storage`);
+          await storage.saveMappings(fileMappings);
+          original = fileMappings;
+          console.log(`✓ Successfully migrated ${fileCount} mappings`);
+        }
+      } catch (error) {
+        console.error("Error loading mappings from file:", error);
+      }
+    }
+    
+    if (Object.keys(original).length === 0) {
+      console.warn("⚠ No spell mappings found in storage or file system!");
+    }
+    
+    const normalized = new Map<string, string>();
+    
+    // Create normalized lookup map
+    for (const [spellName, prism] of Object.entries(original)) {
+      const normalizedName = normalizeSpellName(spellName);
+      normalized.set(normalizedName, prism as string);
+    }
+    
+    console.log(`Created normalized lookup map with ${normalized.size} entries`);
+    return { original, normalized };
+  } catch (error) {
+    console.error("Error loading mappings:", error);
+    return { original: {}, normalized: new Map() };
   }
+}
+
+// Find prism for a spell name using fuzzy matching
+function findPrismForSpell(spellName: string, mappings: { original: Record<string, string>; normalized: Map<string, string> }): string | undefined {
+  // First try exact match (case-insensitive)
+  const normalized = normalizeSpellName(spellName);
+  const prism = mappings.normalized.get(normalized);
+  if (prism) return prism;
+  
+  // Try exact match in original (case-insensitive)
+  for (const [key, value] of Object.entries(mappings.original)) {
+    if (normalizeSpellName(key) === normalized) {
+      return value;
+    }
+  }
+  
+  // Try partial match (for cases like "Protection from Evil and Good" vs "Protection From Evil And Good")
+  for (const [key, value] of Object.entries(mappings.original)) {
+    const keyNormalized = normalizeSpellName(key);
+    if (keyNormalized === normalized || 
+        keyNormalized.replace(/[^a-z0-9]/g, '') === normalized.replace(/[^a-z0-9]/g, '')) {
+      return value;
+    }
+  }
+  
+  return undefined;
 }
 
 // Load spells from D&D 5e API
@@ -146,29 +215,59 @@ function getSampleSpells() {
   ];
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    // Load mappings (async now) - always load fresh mappings
+    const mappings = await loadMappings();
+    
+    // Check if cache should be invalidated
+    // Works for both file system and KV/Upstash Redis
+    const mappingsModified = await getMappingsTimestamp();
+    
     // Check cache first
     const now = Date.now();
     let spells: any[];
     
-    if (spellsCache && (now - cacheTimestamp) < CACHE_DURATION) {
+    // Invalidate cache if:
+    // 1. Mappings timestamp changed (someone saved in admin)
+    // 2. Cache is older than 1 hour
+    // 3. No cache exists yet
+    const mappingsChanged = mappingsModified !== lastMappingsTimestamp && lastMappingsTimestamp !== 0;
+    const cacheExpired = spellsCache && (now - cacheTimestamp) >= CACHE_DURATION;
+    const shouldInvalidate = !spellsCache || mappingsChanged || cacheExpired;
+    
+    if (spellsCache && !shouldInvalidate) {
       spells = spellsCache;
+      console.log(`Using cached spells (cache age: ${Math.round((now - cacheTimestamp) / 1000)}s, mappings unchanged)`);
     } else {
+      const reason = !spellsCache ? 'no cache' : mappingsChanged ? 'mappings changed' : 'cache expired';
+      console.log(`Loading fresh spells from API (reason: ${reason}, old timestamp: ${lastMappingsTimestamp}, new: ${mappingsModified})`);
       spells = await loadSpells();
       spellsCache = spells;
       cacheTimestamp = now;
+      lastMappingsTimestamp = mappingsModified;
     }
     
-    const mappings = loadMappings();
+    // ALWAYS merge with fresh mappings (mappings can change independently of spell data)
+    const spellsWithPrisms = spells.map((spell) => {
+      const prism = findPrismForSpell(spell.name, mappings);
+      return {
+        ...spell,
+        prism: prism || undefined, // Explicitly set to undefined if no match
+      };
+    });
 
-    // Merge spells with their prism assignments
-    const spellsWithPrisms = spells.map((spell) => ({
-      ...spell,
-      prism: mappings[spell.name] || undefined,
-    }));
-
-    return NextResponse.json(spellsWithPrisms);
+    const withPrisms = spellsWithPrisms.filter(s => s.prism).length;
+    console.log(`Returning ${spellsWithPrisms.length} spells (${withPrisms} with prism assignments, ${Object.keys(mappings.original).length} mappings in DB)`);
+    
+    // Add cache control headers to help clients know when to refresh
+    // Use mappings timestamp as cache key since mappings change more frequently
+    return NextResponse.json(spellsWithPrisms, {
+      headers: {
+        'Cache-Control': 'public, max-age=60, must-revalidate',
+        'X-Cache-Timestamp': mappingsModified.toString(),
+      },
+    });
   } catch (error) {
     console.error("Error loading spells:", error);
     return NextResponse.json({ error: "Failed to load spells" }, { status: 500 });

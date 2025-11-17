@@ -1,46 +1,54 @@
 import { NextResponse } from "next/server";
+import { storage } from "@/lib/storage";
 import fs from "fs";
 import path from "path";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const PRISMS_FILE = path.join(DATA_DIR, "prisms.json");
 
-// Ensure data directory exists
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-}
-
-function loadPrisms(): string[] {
-  if (!fs.existsSync(PRISMS_FILE)) {
-    // Initialize with some default prisms based on common D&D magic schools
+async function loadPrisms(): Promise<string[]> {
+  let prisms = await storage.loadPrisms();
+  
+  // If no prisms exist, try to load from file system first (for migration)
+  if (prisms.length === 0 && fs.existsSync(PRISMS_FILE)) {
+    try {
+      const filePrisms = JSON.parse(fs.readFileSync(PRISMS_FILE, "utf-8"));
+      if (filePrisms.length > 0) {
+        console.log(`Migrating ${filePrisms.length} prisms from file system to storage`);
+        await storage.savePrisms(filePrisms);
+        prisms = filePrisms;
+      }
+    } catch (error) {
+      console.error("Error loading prisms from file:", error);
+    }
+  }
+  
+  // If still no prisms exist, initialize with defaults
+  if (prisms.length === 0) {
     const defaultPrisms = [
-      "Abjuration",
-      "Conjuration",
-      "Divination",
-      "Enchantment",
-      "Evocation",
-      "Illusion",
-      "Necromancy",
-      "Transmutation",
+      "ARCANE PRISM",
+      "DIVINE PRISM",
+      "ELEMENTAL PRISM",
+      "FEY PRISM",
+      "FIENDISH PRISM",
+      "SHADOW PRISM",
+      "SOLAR PRISM",
     ];
-    savePrisms(defaultPrisms);
+    await storage.savePrisms(defaultPrisms);
+    // Also save to file system for backup
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    fs.writeFileSync(PRISMS_FILE, JSON.stringify(defaultPrisms, null, 2));
     return defaultPrisms;
   }
-  try {
-    const data = fs.readFileSync(PRISMS_FILE, "utf-8");
-    return JSON.parse(data);
-  } catch {
-    return [];
-  }
-}
-
-function savePrisms(prisms: string[]) {
-  fs.writeFileSync(PRISMS_FILE, JSON.stringify(prisms, null, 2));
+  
+  return prisms;
 }
 
 export async function GET() {
   try {
-    const prisms = loadPrisms();
+    const prisms = await loadPrisms();
     return NextResponse.json(prisms);
   } catch (error) {
     console.error("Error loading prisms:", error);
@@ -56,7 +64,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Prism name is required" }, { status: 400 });
     }
 
-    const prisms = loadPrisms();
+    const prisms = await loadPrisms();
     const prismName = name.trim();
 
     if (prisms.includes(prismName)) {
@@ -64,7 +72,7 @@ export async function POST(request: Request) {
     }
 
     prisms.push(prismName);
-    savePrisms(prisms);
+    await storage.savePrisms(prisms);
 
     return NextResponse.json({ success: true, prism: prismName });
   } catch (error) {
@@ -81,21 +89,18 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: "Prism name is required" }, { status: 400 });
     }
 
-    const prisms = loadPrisms();
+    const prisms = await loadPrisms();
     const filteredPrisms = prisms.filter((p) => p !== name);
-    savePrisms(filteredPrisms);
+    await storage.savePrisms(filteredPrisms);
 
     // Also remove from spell mappings
-    const MAPPINGS_FILE = path.join(DATA_DIR, "spell-prism-mappings.json");
-    if (fs.existsSync(MAPPINGS_FILE)) {
-      const mappings = JSON.parse(fs.readFileSync(MAPPINGS_FILE, "utf-8"));
-      Object.keys(mappings).forEach((spellName) => {
-        if (mappings[spellName] === name) {
-          delete mappings[spellName];
-        }
-      });
-      fs.writeFileSync(MAPPINGS_FILE, JSON.stringify(mappings, null, 2));
-    }
+    const mappings = await storage.loadMappings();
+    Object.keys(mappings).forEach((spellName) => {
+      if (mappings[spellName] === name) {
+        delete mappings[spellName];
+      }
+    });
+    await storage.saveMappings(mappings);
 
     return NextResponse.json({ success: true });
   } catch (error) {

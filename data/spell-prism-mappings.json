@@ -409,5 +409,11 @@
   "Reality Break": "SOLAR PRISM",
   "Gate": "SOLAR PRISM",
   "Time Ravage": "SOLAR PRISM",
-  "Time Stop": "SOLAR PRISM"
+  "Time Stop": "SOLAR PRISM",
+  "Acid Arrow": "ARCANE PRISM",
+  "Acid Splash": "ARCANE PRISM",
+  "Fireball": "ELEMENTAL PRISM",
+  "Fire Bolt": "ELEMENTAL PRISM",
+  "Ray of Frost": "ELEMENTAL PRISM",
+  "Shield": "ARCANE PRISM"
 }

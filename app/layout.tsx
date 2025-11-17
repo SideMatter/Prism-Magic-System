@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -18,23 +19,23 @@ export default function RootLayout({
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between h-16">
               <div className="flex items-center">
-                <a href="/" className="text-xl font-bold text-gray-900 dark:text-white">
+                <Link href="/" className="text-xl font-bold text-gray-900 dark:text-white">
                   Prism Magic System
-                </a>
+                </Link>
               </div>
               <div className="flex items-center space-x-4">
-                <a
+                <Link
                   href="/"
                   className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium"
                 >
                   Search
-                </a>
-                <a
+                </Link>
+                <Link
                   href="/admin"
                   className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium"
                 >
                   Admin
-                </a>
+                </Link>
               </div>
             </div>
           </div>

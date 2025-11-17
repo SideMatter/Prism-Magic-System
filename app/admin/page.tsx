@@ -37,8 +37,18 @@ export default function AdminPage() {
     setLoading(true);
     try {
       const [spellsRes, prismsRes] = await Promise.all([
-        fetch("/api/spells"),
-        fetch("/api/prisms"),
+        fetch("/api/spells", {
+          cache: 'no-store', // Force fresh data
+          headers: {
+            'Cache-Control': 'no-cache',
+          }
+        }),
+        fetch("/api/prisms", {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache',
+          }
+        }),
       ]);
       const spellsData = await spellsRes.json();
       const prismsData = await prismsRes.json();
@@ -78,6 +88,8 @@ export default function AdminPage() {
   const handleSave = async (spellName: string) => {
     setSaving(true);
     try {
+      console.log("Saving spell:", spellName, "with prism:", prismValue);
+      
       const response = await fetch("/api/spells/update", {
         method: "POST",
         headers: {
@@ -89,26 +101,45 @@ export default function AdminPage() {
         }),
       });
 
+      const result = await response.json();
+      
       if (response.ok) {
-        // Update local state
+        console.log("Save successful:", result);
+        
+        // Update local state immediately with the value returned from the server
+        const updatedPrism = result.prism || undefined;
+        
         setSpells((prev) =>
           prev.map((s) =>
-            s.name === spellName ? { ...s, prism: prismValue || undefined } : s
+            s.name === spellName ? { ...s, prism: updatedPrism } : s
           )
         );
         setFilteredSpells((prev) =>
           prev.map((s) =>
-            s.name === spellName ? { ...s, prism: prismValue || undefined } : s
+            s.name === spellName ? { ...s, prism: updatedPrism } : s
           )
         );
+        
         setEditingSpell(null);
         setPrismValue("");
+        
+        // Trigger update in other tabs/pages via localStorage event
+        try {
+          localStorage.setItem('spell-update-trigger', Date.now().toString());
+          localStorage.removeItem('spell-update-trigger'); // Clean up immediately
+        } catch (e) {
+          // Ignore localStorage errors
+        }
+        
+        // Don't reload - trust the optimistic update
+        // The change is already in Redis and will be reflected on search page
       } else {
-        alert("Failed to save. Please try again.");
+        console.error("Save failed:", result);
+        alert(`Failed to save: ${result.error || "Please try again."}`);
       }
     } catch (error) {
       console.error("Error saving:", error);
-      alert("Error saving. Please try again.");
+      alert(`Error saving: ${error instanceof Error ? error.message : "Please try again."}`);
     } finally {
       setSaving(false);
     }
@@ -127,10 +158,12 @@ export default function AdminPage() {
       });
 
       if (response.ok) {
-        setAvailablePrisms((prev) => [...prev, newPrism.trim()]);
+        // Reload data to get fresh prism list
+        await loadData();
         setNewPrism("");
       } else {
-        alert("Failed to add prism. It may already exist.");
+        const error = await response.json().catch(() => ({ error: "Unknown error" }));
+        alert(`Failed to add prism: ${error.error || "It may already exist."}`);
       }
     } catch (error) {
       console.error("Error adding prism:", error);
@@ -153,16 +186,11 @@ export default function AdminPage() {
       });
 
       if (response.ok) {
-        setAvailablePrisms((prev) => prev.filter((p) => p !== prismName));
-        // Remove prism from all spells
-        setSpells((prev) =>
-          prev.map((s) => (s.prism === prismName ? { ...s, prism: undefined } : s))
-        );
-        setFilteredSpells((prev) =>
-          prev.map((s) => (s.prism === prismName ? { ...s, prism: undefined } : s))
-        );
+        // Reload data to get fresh state
+        await loadData();
       } else {
-        alert("Failed to remove prism.");
+        const error = await response.json().catch(() => ({ error: "Unknown error" }));
+        alert(`Failed to remove prism: ${error.error || "Unknown error"}`);
       }
     } catch (error) {
       console.error("Error removing prism:", error);
@@ -175,7 +203,7 @@ export default function AdminPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
-            Admin Panel
+            Paul's Prism Panel of Awesomeness and Power
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-400">
             Manage spell-to-prism mappings
@@ -272,14 +300,24 @@ export default function AdminPage() {
                         ))}
                       </select>
                       <button
-                        onClick={() => handleSave(spell.name)}
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleSave(spell.name);
+                        }}
                         disabled={saving}
                         className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50"
                       >
                         <Save className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={handleCancel}
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleCancel();
+                        }}
                         className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
                       >
                         <X className="w-4 h-4" />
@@ -293,7 +331,12 @@ export default function AdminPage() {
                         </span>
                       )}
                       <button
-                        onClick={() => handleEdit(spell)}
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleEdit(spell);
+                        }}
                         className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
                       >
                         {spell.prism ? "Edit" : "Assign"}

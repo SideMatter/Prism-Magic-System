@@ -1,53 +1,51 @@
 import { NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
-
-const DATA_DIR = path.join(process.cwd(), "data");
-const MAPPINGS_FILE = path.join(DATA_DIR, "spell-prism-mappings.json");
-
-// Ensure data directory exists
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-}
-
-function loadMappings(): Record<string, string> {
-  if (!fs.existsSync(MAPPINGS_FILE)) {
-    return {};
-  }
-  try {
-    const data = fs.readFileSync(MAPPINGS_FILE, "utf-8");
-    return JSON.parse(data);
-  } catch {
-    return {};
-  }
-}
-
-function saveMappings(mappings: Record<string, string>) {
-  fs.writeFileSync(MAPPINGS_FILE, JSON.stringify(mappings, null, 2));
-}
+import { storage } from "@/lib/storage";
 
 export async function POST(request: Request) {
   try {
-    const { spellName, prism } = await request.json();
+    const body = await request.json();
+    const { spellName, prism } = body;
+
+    console.log("Update request received:", { spellName, prism });
 
     if (!spellName) {
+      console.error("Missing spellName in request");
       return NextResponse.json({ error: "Spell name is required" }, { status: 400 });
     }
 
-    const mappings = loadMappings();
+    const mappings = await storage.loadMappings();
+    console.log(`Loaded ${Object.keys(mappings).length} existing mappings`);
 
-    if (prism) {
-      mappings[spellName] = prism;
+    const previousPrism = mappings[spellName];
+    
+    if (prism && prism.trim()) {
+      mappings[spellName] = prism.trim();
+      console.log(`Setting ${spellName} to ${prism.trim()} (was: ${previousPrism || 'none'})`);
     } else {
       delete mappings[spellName];
+      console.log(`Removing prism from ${spellName} (was: ${previousPrism || 'none'})`);
     }
 
-    saveMappings(mappings);
+    await storage.saveMappings(mappings);
+    
+    // Verify the save worked
+    const verifyMappings = await storage.loadMappings();
+    const savedPrism = verifyMappings[spellName];
+    console.log(`Verified save: ${spellName} = ${savedPrism || 'none'}`);
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ 
+      success: true, 
+      message: "Spell updated successfully",
+      spellName,
+      prism: savedPrism || null
+    });
   } catch (error) {
     console.error("Error updating spell:", error);
-    return NextResponse.json({ error: "Failed to update spell" }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json({ 
+      error: "Failed to update spell",
+      details: errorMessage
+    }, { status: 500 });
   }
 }
 

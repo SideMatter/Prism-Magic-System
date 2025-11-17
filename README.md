@@ -65,13 +65,47 @@ Popular D&D 5e APIs:
 
 ## Deployment
 
-This app is ready to deploy on Vercel:
+### Vercel Deployment
 
-1. Push your code to GitHub
-2. Import the project in Vercel
-3. Deploy!
+**Important**: Vercel uses serverless functions with a read-only file system. You **must** set up Redis for production.
 
-The app will work out of the box on Vercel with the file-based storage system.
+#### Quick Setup:
+
+**Option 1: Direct Redis Connection (Recommended)**
+1. Set the `REDIS_URL` environment variable in Vercel:
+   ```
+   REDIS_URL=redis://default:password@host:port
+   ```
+2. Deploy - the app will automatically use Redis!
+
+**Option 2: Upstash Redis via Vercel**
+1. Go to your Vercel project → **Storage** → **Create Database**
+2. Select **Upstash Redis** (or just **Redis**)
+3. Vercel will automatically add environment variables:
+   - `UPSTASH_REDIS_REST_URL`
+   - `UPSTASH_REDIS_REST_TOKEN`
+
+**Deploy**:
+```bash
+# Push to GitHub
+git push origin main
+
+# Or deploy via Vercel CLI
+vercel
+```
+
+The app automatically detects Redis and uses it instead of file system!
+
+#### Local Development:
+
+- Uses file system (`data/` directory) by default
+- No setup required - just run `npm run dev`
+
+#### Migrating Data:
+
+Your existing `data/spell-prism-mappings.json` will be automatically used when you first deploy. The first save will populate Upstash Redis.
+
+See `VERCEL_SETUP.md` for detailed instructions.
 
 ## Future Enhancements
 
