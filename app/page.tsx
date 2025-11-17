@@ -25,6 +25,22 @@ export default function Home() {
   const [selectedSpell, setSelectedSpell] = useState<SpellWithPrism | null>(null);
   const [loading, setLoading] = useState(false);
   const [lastCacheTimestamp, setLastCacheTimestamp] = useState<string>("");
+  
+  // Strain Meter state (persisted in localStorage)
+  const [strain, setStrain] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('strain');
+      return saved ? parseInt(saved, 10) : 0;
+    }
+    return 0;
+  });
+  const [maxStrain, setMaxStrain] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('maxStrain');
+      return saved ? parseInt(saved, 10) : 100;
+    }
+    return 100;
+  });
 
   // Load spells from API
   const loadSpells = async (showLoading = true) => {
@@ -125,6 +141,42 @@ export default function Home() {
     };
   }, [lastCacheTimestamp]); // Removed selectedSpell from dependencies to prevent infinite loop
 
+  // Persist strain to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('strain', strain.toString());
+    }
+  }, [strain]);
+
+  // Persist maxStrain to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('maxStrain', maxStrain.toString());
+    }
+  }, [maxStrain]);
+
+  // Strain control functions
+  const increaseStrain = (amount: number = 1) => {
+    setStrain((prev) => Math.min(prev + amount, maxStrain));
+  };
+
+  const decreaseStrain = (amount: number = 1) => {
+    setStrain((prev) => Math.max(prev - amount, 0));
+  };
+
+  const setStrainValue = (value: number) => {
+    setStrain(Math.max(0, Math.min(value, maxStrain)));
+  };
+
+  const setMaxStrainValue = (value: number) => {
+    const newMax = Math.max(1, value);
+    setMaxStrain(newMax);
+    // Adjust current strain if it exceeds new max
+    if (strain > newMax) {
+      setStrain(newMax);
+    }
+  };
+
   useEffect(() => {
     if (!searchQuery.trim()) {
       setFilteredSpells(spells);
@@ -138,9 +190,118 @@ export default function Home() {
     setFilteredSpells(filtered);
   }, [searchQuery, spells]);
 
+  const strainPercentage = maxStrain > 0 ? (strain / maxStrain) * 100 : 0;
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Strain Meter */}
+        <div className="mb-8 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+              Strain Meter
+            </h2>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600 dark:text-gray-400">
+                {strain} / {maxStrain}
+              </span>
+            </div>
+          </div>
+          
+          {/* Strain Bar */}
+          <div className="mb-4">
+            <div className="w-full h-8 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden relative">
+              <div
+                className="h-full bg-gradient-to-r from-red-500 to-red-700 transition-all duration-300 ease-out flex items-center justify-end pr-2"
+                style={{ width: `${strainPercentage}%` }}
+              >
+                {strainPercentage > 10 && (
+                  <span className="text-white text-xs font-bold">
+                    {Math.round(strainPercentage)}%
+                  </span>
+                )}
+              </div>
+              {strainPercentage <= 10 && strain > 0 && (
+                <span className="absolute inset-0 flex items-center justify-center text-red-700 dark:text-red-500 text-xs font-bold">
+                  {Math.round(strainPercentage)}%
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Controls */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Strain Controls */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Current Strain
+              </label>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => decreaseStrain(1)}
+                  className="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-semibold"
+                >
+                  -1
+                </button>
+                <button
+                  onClick={() => decreaseStrain(5)}
+                  className="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-semibold"
+                >
+                  -5
+                </button>
+                <input
+                  type="number"
+                  min="0"
+                  max={maxStrain}
+                  value={strain}
+                  onChange={(e) => setStrainValue(parseInt(e.target.value) || 0)}
+                  className="flex-1 px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-center"
+                />
+                <button
+                  onClick={() => increaseStrain(1)}
+                  className="px-3 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-semibold"
+                >
+                  +1
+                </button>
+                <button
+                  onClick={() => increaseStrain(5)}
+                  className="px-3 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-semibold"
+                >
+                  +5
+                </button>
+              </div>
+            </div>
+
+            {/* Max Strain Control */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Max Strain Capacity
+              </label>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setMaxStrainValue(maxStrain - 10)}
+                  className="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-semibold"
+                >
+                  -10
+                </button>
+                <input
+                  type="number"
+                  min="1"
+                  value={maxStrain}
+                  onChange={(e) => setMaxStrainValue(parseInt(e.target.value) || 1)}
+                  className="flex-1 px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-center"
+                />
+                <button
+                  onClick={() => setMaxStrainValue(maxStrain + 10)}
+                  className="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-semibold"
+                >
+                  +10
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
             Prism Magic System
