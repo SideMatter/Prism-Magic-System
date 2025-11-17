@@ -59,9 +59,12 @@ async function getKVClient() {
   return kvClient;
 }
 
+// Type for spell-prism mappings (can be single or multiple prisms)
+export type SpellPrismMappings = Record<string, string | string[]>;
+
 // File system storage (local dev)
 export const fileStorage = {
-  async loadMappings(): Promise<Record<string, string>> {
+  async loadMappings(): Promise<SpellPrismMappings> {
     if (!fs.existsSync(MAPPINGS_FILE)) {
       return {};
     }
@@ -74,7 +77,7 @@ export const fileStorage = {
     }
   },
 
-  async saveMappings(mappings: Record<string, string>): Promise<boolean> {
+  async saveMappings(mappings: SpellPrismMappings): Promise<boolean> {
     try {
       if (!fs.existsSync(DATA_DIR)) {
         fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -120,7 +123,7 @@ export const fileStorage = {
 
 // Direct Redis storage (ioredis)
 export const redisStorage = {
-  async loadMappings(): Promise<Record<string, string>> {
+  async loadMappings(): Promise<SpellPrismMappings> {
     const redis = await getRedisClient();
     if (!redis) return {};
     
@@ -134,7 +137,7 @@ export const redisStorage = {
     }
   },
 
-  async saveMappings(mappings: Record<string, string>): Promise<boolean> {
+  async saveMappings(mappings: SpellPrismMappings): Promise<boolean> {
     const redis = await getRedisClient();
     if (!redis) return false;
     
@@ -181,12 +184,12 @@ export const redisStorage = {
 
 // REST API Redis storage (Vercel KV / Upstash)
 export const kvStorage = {
-  async loadMappings(): Promise<Record<string, string>> {
+  async loadMappings(): Promise<SpellPrismMappings> {
     const kv = await getKVClient();
     if (!kv) return {};
     
     try {
-      const data = await kv.get("spell-prism-mappings") as Record<string, string> | null;
+      const data = await kv.get("spell-prism-mappings") as SpellPrismMappings | null;
       return data || {};
     } catch (error) {
       console.error("Error loading mappings from KV:", error);
@@ -194,7 +197,7 @@ export const kvStorage = {
     }
   },
 
-  async saveMappings(mappings: Record<string, string>): Promise<boolean> {
+  async saveMappings(mappings: SpellPrismMappings): Promise<boolean> {
     const kv = await getKVClient();
     if (!kv) return false;
     
@@ -267,7 +270,7 @@ export async function getMappingsTimestamp(): Promise<number> {
 
 // Unified storage interface (auto-selects based on environment)
 export const storage = {
-  async loadMappings(): Promise<Record<string, string>> {
+  async loadMappings(): Promise<SpellPrismMappings> {
     if (USE_REDIS_DIRECT) {
       return redisStorage.loadMappings();
     } else if (USE_REDIS_REST) {
@@ -276,7 +279,7 @@ export const storage = {
     return fileStorage.loadMappings();
   },
 
-  async saveMappings(mappings: Record<string, string>): Promise<boolean> {
+  async saveMappings(mappings: SpellPrismMappings): Promise<boolean> {
     if (USE_REDIS_DIRECT) {
       return redisStorage.saveMappings(mappings);
     } else if (USE_REDIS_REST) {

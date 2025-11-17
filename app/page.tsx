@@ -15,7 +15,7 @@ interface Spell {
 }
 
 interface SpellWithPrism extends Spell {
-  prism?: string;
+  prism?: string | string[]; // Can have multiple prisms
 }
 
 export default function Home() {
@@ -182,14 +182,27 @@ export default function Home() {
                   <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
                     {selectedSpell.name}
                   </h2>
-                  {selectedSpell.prism && (
-                    <div className="mb-6 p-4 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg text-white">
-                      <div className="flex items-center gap-2">
-                        <Sparkles className="w-6 h-6" />
-                        <span className="text-xl font-bold">Prism: {selectedSpell.prism}</span>
-                      </div>
-                    </div>
-                  )}
+                        {selectedSpell.prism && (
+                          <div className="mb-6 p-4 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg text-white">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Sparkles className="w-6 h-6" />
+                              <span className="text-xl font-bold">
+                                {Array.isArray(selectedSpell.prism) ? 'Prisms:' : 'Prism:'}
+                              </span>
+                            </div>
+                            <div className="flex flex-wrap gap-2 ml-8">
+                              {Array.isArray(selectedSpell.prism) ? (
+                                selectedSpell.prism.map((prism) => (
+                                  <span key={prism} className="px-3 py-1 bg-white/20 rounded-full text-sm">
+                                    {prism}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="text-xl">{selectedSpell.prism}</span>
+                              )}
+                            </div>
+                          </div>
+                        )}
                   {!selectedSpell.prism && (
                     <div className="mb-6 p-4 bg-yellow-100 dark:bg-yellow-900 rounded-lg">
                       <p className="text-yellow-800 dark:text-yellow-200">
@@ -268,11 +281,25 @@ export default function Home() {
                               Level {spell.level} • {spell.school}
                             </p>
                           </div>
-                          {spell.prism && (
-                            <div className="ml-4 px-3 py-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full text-white text-sm font-semibold">
-                              {spell.prism}
-                            </div>
-                          )}
+                          <div className="flex flex-wrap gap-1 ml-4 justify-end">
+                            {spell.prism ? (
+                              Array.isArray(spell.prism) ? (
+                                spell.prism.map((prism) => (
+                                  <span key={prism} className="px-2 py-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full text-white text-xs font-semibold whitespace-nowrap">
+                                    {prism}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="px-3 py-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full text-white text-sm font-semibold whitespace-nowrap">
+                                  {spell.prism}
+                                </span>
+                              )
+                            ) : (
+                              <span className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded-full text-gray-700 dark:text-gray-300 text-xs font-semibold whitespace-nowrap">
+                                No Prism
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))}

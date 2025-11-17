@@ -1,9 +1,6 @@
 {
   "Crown of Stars": "DIVINE PRISM",
-  "Misty Step": [
-    "FEY PRISM",
-    "ARCANE PRISM"
-  ],
+  "Misty Step": "FEY PRISM",
   "Toll the Dead": "DIVINE PRISM",
   "Detect Poison and Disease": "FEY PRISM",
   "Wall of Water": "ELEMENTAL PRISM",
@@ -11,10 +8,7 @@
   "Bless": "DIVINE PRISM",
   "Ceremony": "DIVINE PRISM",
   "Command": "DIVINE PRISM",
-  "Cure Wounds": [
-    "DIVINE PRISM",
-    "FEY PRISM"
-  ],
+  "Cure Wounds": "DIVINE PRISM",
   "Divine Favor": "DIVINE PRISM",
   "Healing Word": "DIVINE PRISM",
   "Heroism": "DIVINE PRISM",
@@ -28,14 +22,8 @@
   "Augury": "DIVINE PRISM",
   "Calm Emotions": "DIVINE PRISM",
   "Continual Flame": "DIVINE PRISM",
-  "Gentle Repose": [
-    "SHADOW PRISM",
-    "DIVINE PRISM"
-  ],
-  "Lesser Restoration": [
-    "DIVINE PRISM",
-    "FEY PRISM"
-  ],
+  "Gentle Repose": "SHADOW PRISM",
+  "Lesser Restoration": "DIVINE PRISM",
   "Prayer Of Healing": "DIVINE PRISM",
   "Spiritual Weapon": "DIVINE PRISM",
   "Warding Bond": "DIVINE PRISM",
@@ -48,10 +36,7 @@
   "Daylight": "DIVINE PRISM",
   "Life Transference": "SHADOW PRISM",
   "Mass Healing Word": "DIVINE PRISM",
-  "Revivify": [
-    "DIVINE PRISM",
-    "FEY PRISM"
-  ],
+  "Revivify": "DIVINE PRISM",
   "Spirit Guardians": "DIVINE PRISM",
   "Spirit Shroud": "SHADOW PRISM",
   "Aura Of Life": "DIVINE PRISM",
@@ -61,17 +46,11 @@
   "Circle Of Power": "DIVINE PRISM",
   "Commune": "DIVINE PRISM",
   "Dawn": "DIVINE PRISM",
-  "Greater Restoration": [
-    "DIVINE PRISM",
-    "FEY PRISM"
-  ],
+  "Greater Restoration": "DIVINE PRISM",
   "Hallow": "DIVINE PRISM",
   "Holy Weapon": "DIVINE PRISM",
   "Mass Cure Wounds": "DIVINE PRISM",
-  "Raise Dead": [
-    "DIVINE PRISM",
-    "SHADOW PRISM"
-  ],
+  "Raise Dead": "DIVINE PRISM",
   "Blade Barrier": "DIVINE PRISM",
   "Forbiddance": "DIVINE PRISM",
   "Harm": "DIVINE PRISM",
@@ -83,23 +62,14 @@
   "Word Of Recall": "DIVINE PRISM",
   "Conjure Celestial": "DIVINE PRISM",
   "Divine Word": "DIVINE PRISM",
-  "Resurrection": [
-    "DIVINE PRISM",
-    "SHADOW PRISM"
-  ],
+  "Resurrection": "DIVINE PRISM",
   "Temple Of The Gods": "DIVINE PRISM",
   "Holy Aura": "DIVINE PRISM",
   "Mass Heal": "DIVINE PRISM",
-  "True Resurrection": [
-    "DIVINE PRISM",
-    "SHADOW PRISM"
-  ],
+  "True Resurrection": "DIVINE PRISM",
   "Animal Friendship": "FEY PRISM",
   "Beast Bond": "FEY PRISM",
-  "Charm Person": [
-    "FEY PRISM",
-    "ARCANE PRISM"
-  ],
+  "Charm Person": "FEY PRISM",
   "Compelled Duel": "FEY PRISM",
   "Ensnaring Strike": "FEY PRISM",
   "Entangle": "FEY PRISM",
@@ -108,37 +78,25 @@
   "Hail Of Thorns": "FEY PRISM",
   "Hunter’s Mark": "FEY PRISM",
   "Speak With Animals": "FEY PRISM",
-  "Sleep": [
-    "FEY PRISM",
-    "ARCANE PRISM"
-  ],
+  "Sleep": "FEY PRISM",
   "Animal Messenger": "FEY PRISM",
   "Barkskin": "FEY PRISM",
   "Beast Sense": "FEY PRISM",
   "Cordon Of Arrows": "FEY PRISM",
   "Find Steed": "FEY PRISM",
   "Find Traps": "FEY PRISM",
-  "Hold Person": [
-    "FEY PRISM",
-    "ARCANE PRISM"
-  ],
+  "Hold Person": "FEY PRISM",
   "Moonbeam": "FEY PRISM",
   "Pass Without Trace": "FEY PRISM",
   "Spike Growth": "FEY PRISM",
-  "Suggestion": [
-    "FEY PRISM",
-    "ARCANE PRISM"
-  ],
+  "Suggestion": "FEY PRISM",
   "Tasha’s Hideous Laughter": "FEY PRISM",
   "Crown Of Madness": "FEY PRISM",
   "Silvery Barbs": "FEY PRISM",
   "Conjure Animals": "FEY PRISM",
   "Conjure Barrage": "FEY PRISM",
   "Bestow Curse": "FEY PRISM",
-  "Hypnotic Pattern": [
-    "FEY PRISM",
-    "ARCANE PRISM"
-  ],
+  "Hypnotic Pattern": "FEY PRISM",
   "Plant Growth": "FEY PRISM",
   "Speak With Plants": "FEY PRISM",
   "Water Walk": "FEY PRISM",
@@ -159,10 +117,7 @@
   "Awaken": "FEY PRISM",
   "Commune With Nature": "FEY PRISM",
   "Conjure Volley": "FEY PRISM",
-  "Dominate Person": [
-    "FIENDISH PRISM",
-    "FEY PRISM"
-  ],
+  "Dominate Person": "FIENDISH PRISM",
   "Geas": "FEY PRISM",
   "Insect Plague": "FEY PRISM",
   "Mass Suggestion": "FEY PRISM",
@@ -179,10 +134,7 @@
   "Tsunami": "FEY PRISM",
   "Foresight": "FEY PRISM",
   "Dream": "FEY PRISM",
-  "Shapechange": [
-    "FEY PRISM",
-    "ARCANE PRISM"
-  ],
+  "Shapechange": "FEY PRISM",
   "Storm Of Vengeance": "FEY PRISM",
   "Mending": "ARCANE PRISM",
   "Message": "ARCANE PRISM",
@@ -206,10 +158,7 @@
   "Tenser's Floating Disk": "ARCANE PRISM",
   "Unseen Servant": "ARCANE PRISM",
   "Borrowed Knowledge": "ARCANE PRISM",
-  "Alter Self": [
-    "ARCANE PRISM",
-    "FEY PRISM"
-  ],
+  "Alter Self": "ARCANE PRISM",
   "Arcane Lock": "ARCANE PRISM",
   "Detect Thoughts": "ARCANE PRISM",
   "Enhance Ability": "ARCANE PRISM",
@@ -244,10 +193,7 @@
   "Mordenkainen’s Private Sanctum": "ARCANE PRISM",
   "Otiluke’s": "ARCANE PRISM",
   "Resilient Sphere": "ARCANE PRISM",
-  "Polymorph": [
-    "ARCANE PRISM",
-    "FEY PRISM"
-  ],
+  "Polymorph": "ARCANE PRISM",
   "Summon Aberration": "ARCANE PRISM",
   "Summon Construct": "ARCANE PRISM",
   "Animate Objects": "ARCANE PRISM",
@@ -270,10 +216,7 @@
   "Magic Jar": "ARCANE PRISM",
   "Soul Cage": "FIENDISH PRISM",
   "Mordenkainen’s Sword": "ARCANE PRISM",
-  "Etherealness": [
-    "ARCANE PRISM",
-    "SHADOW PRISM"
-  ],
+  "Etherealness": "ARCANE PRISM",
   "Forcecage": "ARCANE PRISM",
   "Mirage Arcane": "ARCANE PRISM",
   "Mordenkainen’s Magnificent Mansion": "ARCANE PRISM",
@@ -290,10 +233,7 @@
   "Astral Projection": "ARCANE PRISM",
   "Imprisonment": "ARCANE PRISM",
   "Prismatic Wall": "ARCANE PRISM",
-  "True Polymorph": [
-    "ARCANE PRISM",
-    "FEY PRISM"
-  ],
+  "True Polymorph": "ARCANE PRISM",
   "Wish": "ARCANE PRISM",
   "Arcane Damaging (7): Booming Blade": "ARCANE PRISM",
   "Lightning Lure": "ELEMENTAL PRISM",
@@ -386,18 +326,12 @@
   "Armor Of Agathys": "FIENDISH PRISM",
   "Arms Of Hadar": "FIENDISH PRISM",
   "Hex": "FIENDISH PRISM",
-  "Hellish Rebuke": [
-    "FIENDISH PRISM",
-    "ELEMENTAL PRISM"
-  ],
+  "Hellish Rebuke": "FIENDISH PRISM",
   "Ray Of Sickness": "FIENDISH PRISM",
   "Tasha’s Caustic Brew": "FIENDISH PRISM",
   "Witch Bolt": "FIENDISH PRISM",
   "Branding Smite": "FIENDISH PRISM",
-  "Darkness": [
-    "FIENDISH PRISM",
-    "SHADOW PRISM"
-  ],
+  "Darkness": "FIENDISH PRISM",
   "Enthrall": "FIENDISH PRISM",
   "Tasha’s Mind Whip": "FIENDISH PRISM",
   "Enemies Abound": "FIENDISH PRISM",
@@ -414,48 +348,27 @@
   "Negative Energy Flood": "SHADOW PRISM",
   "Synaptic Static": "FIENDISH PRISM",
   "Circle Of Death": "FIENDISH PRISM",
-  "Create Undead": [
-    "SHADOW PRISM",
-    "FIENDISH PRISM"
-  ],
+  "Create Undead": "SHADOW PRISM",
   "Eyebite": "FIENDISH PRISM",
   "Mental Prison": "FIENDISH PRISM",
   "Finger Of Death": "SHADOW PRISM",
   "Power Word Pain": "FIENDISH PRISM",
-  "Dominate Monster": [
-    "FIENDISH PRISM",
-    "FEY PRISM"
-  ],
+  "Dominate Monster": "FIENDISH PRISM",
   "Glibness": "FIENDISH PRISM",
   "Maddening Darkness": "SHADOW PRISM",
   "Power Word Stun": "FIENDISH PRISM",
   "Power Word Kill": "SHADOW PRISM",
   "Cause Fear": "SHADOW PRISM",
-  "Disguise Self": [
-    "SHADOW PRISM",
-    "ARCANE PRISM"
-  ],
+  "Disguise Self": "SHADOW PRISM",
   "Blindness/deafness": "SHADOW PRISM",
-  "Invisibility": [
-    "SHADOW PRISM",
-    "ARCANE PRISM"
-  ],
+  "Invisibility": "SHADOW PRISM",
   "Phantasmal Force": "SHADOW PRISM",
   "Silence": "SHADOW PRISM",
   "Wither And Bloom": "SHADOW PRISM",
-  "Animate Dead": [
-    "SHADOW PRISM",
-    "FIENDISH PRISM"
-  ],
-  "Fear": [
-    "SHADOW PRISM",
-    "FIENDISH PRISM"
-  ],
+  "Animate Dead": "SHADOW PRISM",
+  "Fear": "SHADOW PRISM",
   "Speak With Dead": "SHADOW PRISM",
-  "Greater Invisibility": [
-    "SHADOW PRISM",
-    "ARCANE PRISM"
-  ],
+  "Greater Invisibility": "SHADOW PRISM",
   "Phantasmal Killer": "SHADOW PRISM",
   "Shadow Of Moil": "SHADOW PRISM",
   "Summon Shadowspawn": "SHADOW PRISM",
@@ -464,10 +377,7 @@
   "Abi-dalzim’s Horrid Wilting": "SHADOW PRISM",
   "Detect Evil And Good": "SOLAR PRISM",
   "Detect Magic": "SOLAR PRISM",
-  "Dimension Door": [
-    "SOLAR PRISM",
-    "ARCANE PRISM"
-  ],
+  "Dimension Door": "SOLAR PRISM",
   "Gift Of Alacrity": "SOLAR PRISM",
   "Magnify": "SOLAR PRISM",
   "Gravity": "SOLAR PRISM",
@@ -476,16 +386,10 @@
   "Locate Object": "SOLAR PRISM",
   "Kinetic Jaunt": "SOLAR PRISM",
   "Vortex Warp": "SOLAR PRISM",
-  "Blink": [
-    "SOLAR PRISM",
-    "ARCANE PRISM"
-  ],
+  "Blink": "SOLAR PRISM",
   "Clairvoyance": "SOLAR PRISM",
   "Pulse Wave": "SOLAR PRISM",
-  "Banishment": [
-    "SOLAR PRISM",
-    "DIVINE PRISM"
-  ],
+  "Banishment": "SOLAR PRISM",
   "Divination": "SOLAR PRISM",
   "Gravity Fissure": "SOLAR PRISM",
   "Gravity Sinkhole": "SOLAR PRISM",
@@ -497,35 +401,19 @@
   "Temporal Shunt": "SOLAR PRISM",
   "Find The Path": "SOLAR PRISM",
   "True Seeing": "SOLAR PRISM",
-  "Teleport": [
-    "SOLAR PRISM",
-    "ARCANE PRISM"
-  ],
-  "Plane Shift": [
-    "SOLAR PRISM",
-    "DIVINE PRISM"
-  ],
+  "Teleport": "SOLAR PRISM",
+  "Plane Shift": "SOLAR PRISM",
   "Tether Essence": "SOLAR PRISM",
   "Scatter": "SOLAR PRISM",
   "Dark Star": "SOLAR PRISM",
   "Reality Break": "SOLAR PRISM",
-  "Gate": [
-    "SOLAR PRISM",
-    "DIVINE PRISM",
-    "FIENDISH PRISM"
-  ],
+  "Gate": "SOLAR PRISM",
   "Time Ravage": "SOLAR PRISM",
   "Time Stop": "SOLAR PRISM",
   "Acid Arrow": "ARCANE PRISM",
   "Acid Splash": "ARCANE PRISM",
-  "Fireball": [
-    "ELEMENTAL PRISM",
-    "FIENDISH PRISM"
-  ],
+  "Fireball": "ELEMENTAL PRISM",
   "Fire Bolt": "ELEMENTAL PRISM",
   "Ray of Frost": "ELEMENTAL PRISM",
-  "Shield": [
-    "ARCANE PRISM",
-    "DIVINE PRISM"
-  ]
+  "Shield": "ARCANE PRISM"
 }

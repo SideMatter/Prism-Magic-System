@@ -18,12 +18,31 @@ export async function POST(request: Request) {
 
     const previousPrism = mappings[spellName];
     
-    if (prism && prism.trim()) {
-      mappings[spellName] = prism.trim();
-      console.log(`Setting ${spellName} to ${prism.trim()} (was: ${previousPrism || 'none'})`);
+    // Handle both single prism (string) and multiple prisms (array)
+    if (prism) {
+      if (Array.isArray(prism)) {
+        // Multiple prisms
+        if (prism.length > 0) {
+          mappings[spellName] = prism;
+          console.log(`Setting ${spellName} to [${prism.join(', ')}] (was: ${JSON.stringify(previousPrism) || 'none'})`);
+        } else {
+          // Empty array = remove prism
+          delete mappings[spellName];
+          console.log(`Removing prism from ${spellName} (empty array)`);
+        }
+      } else if (typeof prism === 'string' && prism.trim()) {
+        // Single prism
+        mappings[spellName] = prism.trim();
+        console.log(`Setting ${spellName} to ${prism.trim()} (was: ${JSON.stringify(previousPrism) || 'none'})`);
+      } else {
+        // Invalid or empty string
+        delete mappings[spellName];
+        console.log(`Removing prism from ${spellName} (was: ${JSON.stringify(previousPrism) || 'none'})`);
+      }
     } else {
+      // null or undefined = remove prism
       delete mappings[spellName];
-      console.log(`Removing prism from ${spellName} (was: ${previousPrism || 'none'})`);
+      console.log(`Removing prism from ${spellName} (was: ${JSON.stringify(previousPrism) || 'none'})`);
     }
 
     await storage.saveMappings(mappings);

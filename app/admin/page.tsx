@@ -15,7 +15,7 @@ interface Spell {
 }
 
 interface SpellWithPrism extends Spell {
-  prism?: string;
+  prism?: string | string[]; // Can have multiple prisms
 }
 
 export default function AdminPage() {
@@ -24,6 +24,7 @@ export default function AdminPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [editingSpell, setEditingSpell] = useState<string | null>(null);
   const [prismValue, setPrismValue] = useState("");
+  const [selectedPrisms, setSelectedPrisms] = useState<string[]>([]); // For multi-select
   const [availablePrisms, setAvailablePrisms] = useState<string[]>([]);
   const [newPrism, setNewPrism] = useState("");
   const [loading, setLoading] = useState(false);
@@ -77,18 +78,30 @@ export default function AdminPage() {
 
   const handleEdit = (spell: SpellWithPrism) => {
     setEditingSpell(spell.name);
-    setPrismValue(spell.prism || "");
+    if (Array.isArray(spell.prism)) {
+      setSelectedPrisms(spell.prism);
+      setPrismValue(""); // Not used for multi-select
+    } else {
+      setPrismValue(spell.prism || "");
+      setSelectedPrisms([]);
+    }
   };
 
   const handleCancel = () => {
     setEditingSpell(null);
     setPrismValue("");
+    setSelectedPrisms([]);
   };
 
   const handleSave = async (spellName: string) => {
     setSaving(true);
     try {
-      console.log("Saving spell:", spellName, "with prism:", prismValue);
+      // Determine what to save: array of prisms or single prism
+      const prismToSave = selectedPrisms.length > 0 
+        ? selectedPrisms 
+        : (prismValue || null);
+      
+      console.log("Saving spell:", spellName, "with prism(s):", prismToSave);
       
       const response = await fetch("/api/spells/update", {
         method: "POST",
@@ -97,7 +110,7 @@ export default function AdminPage() {
         },
         body: JSON.stringify({
           spellName,
-          prism: prismValue || null,
+          prism: prismToSave,
         }),
       });
 
@@ -122,6 +135,7 @@ export default function AdminPage() {
         
         setEditingSpell(null);
         setPrismValue("");
+        setSelectedPrisms([]);
         
         // Trigger update in other tabs/pages via localStorage event
         try {
@@ -286,50 +300,89 @@ export default function AdminPage() {
                     </p>
                   </div>
                   {editingSpell === spell.name ? (
-                    <div className="flex items-center gap-2 ml-4">
-                      <select
-                        value={prismValue}
-                        onChange={(e) => setPrismValue(e.target.value)}
-                        className="px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      >
-                        <option value="">No Prism</option>
-                        {availablePrisms.map((prism) => (
-                          <option key={prism} value={prism}>
-                            {prism}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleSave(spell.name);
-                        }}
-                        disabled={saving}
-                        className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50"
-                      >
-                        <Save className="w-4 h-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleCancel();
-                        }}
-                        className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
+                    <div className="flex flex-col items-end gap-2 ml-4 min-w-[300px]">
+                      {/* Multi-select prisms */}
+                      <div className="w-full">
+                        <label className="text-sm text-gray-600 dark:text-gray-400 mb-1 block">
+                          Select Prisms (click to toggle):
+                        </label>
+                        <div className="flex flex-wrap gap-1 p-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-700 min-h-[40px]">
+                          {availablePrisms.map((prism) => {
+                            const isSelected = selectedPrisms.includes(prism);
+                            return (
+                              <button
+                                key={prism}
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setSelectedPrisms(prev =>
+                                    isSelected
+                                      ? prev.filter(p => p !== prism)
+                                      : [...prev, prism]
+                                  );
+                                }}
+                                className={`px-2 py-1 rounded-full text-xs font-semibold transition-colors ${
+                                  isSelected
+                                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+                                    : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-500'
+                                }`}
+                              >
+                                {prism}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleSave(spell.name);
+                          }}
+                          disabled={saving}
+                          className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 flex items-center gap-1"
+                        >
+                          <Save className="w-4 h-4" />
+                          <span>Save</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleCancel();
+                          }}
+                          className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 flex items-center gap-1"
+                        >
+                          <X className="w-4 h-4" />
+                          <span>Cancel</span>
+                        </button>
+                      </div>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-2 ml-4">
-                      {spell.prism && (
-                        <span className="px-3 py-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full text-white text-sm font-semibold">
-                          {spell.prism}
-                        </span>
-                      )}
+                    <div className="flex flex-col items-end gap-2 ml-4">
+                      <div className="flex flex-wrap gap-1 justify-end">
+                        {spell.prism ? (
+                          Array.isArray(spell.prism) ? (
+                            spell.prism.map((prism) => (
+                              <span key={prism} className="px-2 py-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full text-white text-xs font-semibold">
+                                {prism}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="px-3 py-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full text-white text-xs font-semibold">
+                              {spell.prism}
+                            </span>
+                          )
+                        ) : (
+                          <span className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded-full text-gray-700 dark:text-gray-300 text-xs font-semibold">
+                            No Prism
+                          </span>
+                        )}
+                      </div>
                       <button
                         type="button"
                         onClick={(e) => {

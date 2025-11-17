@@ -31,7 +31,7 @@ function normalizeSpellName(name: string): string {
 }
 
 // Load spell-prism mappings with normalized keys for better matching
-async function loadMappings(): Promise<{ original: Record<string, string>; normalized: Map<string, string> }> {
+async function loadMappings(): Promise<{ original: Record<string, string | string[]>; normalized: Map<string, string | string[]> }> {
   try {
     let original = await storage.loadMappings();
     console.log(`Loaded ${Object.keys(original).length} mappings from storage`);
@@ -56,12 +56,12 @@ async function loadMappings(): Promise<{ original: Record<string, string>; norma
       console.warn("⚠ No spell mappings found in storage or file system!");
     }
     
-    const normalized = new Map<string, string>();
-    
+    const normalized = new Map<string, string | string[]>();
+
     // Create normalized lookup map
     for (const [spellName, prism] of Object.entries(original)) {
       const normalizedName = normalizeSpellName(spellName);
-      normalized.set(normalizedName, prism as string);
+      normalized.set(normalizedName, prism);
     }
     
     console.log(`Created normalized lookup map with ${normalized.size} entries`);
@@ -73,7 +73,7 @@ async function loadMappings(): Promise<{ original: Record<string, string>; norma
 }
 
 // Find prism for a spell name using fuzzy matching
-function findPrismForSpell(spellName: string, mappings: { original: Record<string, string>; normalized: Map<string, string> }): string | undefined {
+function findPrismForSpell(spellName: string, mappings: { original: Record<string, string | string[]>; normalized: Map<string, string | string[]> }): string | string[] | undefined {
   // First try exact match (case-insensitive)
   const normalized = normalizeSpellName(spellName);
   const prism = mappings.normalized.get(normalized);
