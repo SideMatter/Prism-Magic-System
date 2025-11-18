@@ -98,60 +98,78 @@ function findPrismForSpell(spellName: string, mappings: { original: Record<strin
   return undefined;
 }
 
-// Load spells from D&D 5e API
+// Load spells from D&D 5e API with batching to avoid rate limits
 async function loadSpells() {
   try {
     // Fetch all spells from D&D 5e API
     const response = await fetch("https://www.dnd5eapi.co/api/spells");
     const data = await response.json();
     
-    // Fetch details for all spells (all ~320 spells)
-    const spellPromises = data.results.map(async (spell: { index: string; url: string }) => {
-      try {
-        const spellResponse = await fetch(`https://www.dnd5eapi.co${spell.url}`);
-        const spellData = await spellResponse.json();
-        
-        // Format components
-        const components = spellData.components?.join(", ") || "";
-        const material = spellData.material ? `, M (${spellData.material})` : "";
-        const componentsStr = components + material;
-        
-        // Format description
-        const description = Array.isArray(spellData.desc)
-          ? spellData.desc.join("\n\n")
-          : spellData.desc || "";
-        
-        // Format higher level description if available
-        const higherLevel = spellData.higher_level
-          ? (Array.isArray(spellData.higher_level)
-              ? spellData.higher_level.join("\n\n")
-              : spellData.higher_level)
-          : "";
-        
-        const fullDescription = higherLevel
-          ? `${description}\n\n${higherLevel}`
-          : description;
-        
-        return {
-          name: spellData.name,
-          level: spellData.level,
-          school: spellData.school?.name || "Unknown",
-          casting_time: spellData.casting_time || "Unknown",
-          range: spellData.range || "Unknown",
-          components: componentsStr || "Unknown",
-          duration: spellData.duration || "Unknown",
-          description: fullDescription,
-        };
-      } catch (error) {
-        console.error(`Error fetching spell ${spell.index}:`, error);
-        return null;
-      }
-    });
+    console.log(`Fetching ${data.results.length} spells from D&D 5e API...`);
     
-    const spells = await Promise.all(spellPromises);
-    const validSpells = spells.filter((spell) => spell !== null);
-    console.log(`Loaded ${validSpells.length} spells from D&D 5e API`);
-    return validSpells;
+    // Batch requests to avoid overwhelming the API (20 at a time with delays)
+    const BATCH_SIZE = 20;
+    const BATCH_DELAY = 100; // ms between batches
+    const allSpells: any[] = [];
+    
+    for (let i = 0; i < data.results.length; i += BATCH_SIZE) {
+      const batch = data.results.slice(i, i + BATCH_SIZE);
+      
+      const spellPromises = batch.map(async (spell: { index: string; url: string }) => {
+        try {
+          const spellResponse = await fetch(`https://www.dnd5eapi.co${spell.url}`);
+          const spellData = await spellResponse.json();
+          
+          // Format components
+          const components = spellData.components?.join(", ") || "";
+          const material = spellData.material ? `, M (${spellData.material})` : "";
+          const componentsStr = components + material;
+          
+          // Format description
+          const description = Array.isArray(spellData.desc)
+            ? spellData.desc.join("\n\n")
+            : spellData.desc || "";
+          
+          // Format higher level description if available
+          const higherLevel = spellData.higher_level
+            ? (Array.isArray(spellData.higher_level)
+                ? spellData.higher_level.join("\n\n")
+                : spellData.higher_level)
+            : "";
+          
+          const fullDescription = higherLevel
+            ? `${description}\n\n${higherLevel}`
+            : description;
+          
+          return {
+            name: spellData.name,
+            level: spellData.level,
+            school: spellData.school?.name || "Unknown",
+            casting_time: spellData.casting_time || "Unknown",
+            range: spellData.range || "Unknown",
+            components: componentsStr || "Unknown",
+            duration: spellData.duration || "Unknown",
+            description: fullDescription,
+          };
+        } catch (error) {
+          console.error(`Error fetching spell ${spell.index}:`, error);
+          return null;
+        }
+      });
+      
+      const batchSpells = await Promise.all(spellPromises);
+      allSpells.push(...batchSpells.filter(spell => spell !== null));
+      
+      console.log(`Loaded batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(data.results.length / BATCH_SIZE)} (${allSpells.length} spells so far)`);
+      
+      // Add delay between batches to be nice to the API
+      if (i + BATCH_SIZE < data.results.length) {
+        await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
+      }
+    }
+    
+    console.log(`✓ Successfully loaded ${allSpells.length} spells from D&D 5e API`);
+    return allSpells;
   } catch (error) {
     console.error("Error loading spells from API, falling back to sample:", error);
     // Fallback to sample spells if API fails
@@ -243,14 +261,15 @@ export async function GET(request: Request) {
     
     if (spellsCache && !shouldInvalidate) {
       spells = spellsCache;
-      console.log(`Using cached spells (cache age: ${Math.round((now - cacheTimestamp) / 1000)}s, timestamp unchanged)`);
+      console.log(`✓ Using cached ${spellsCache.length} spells (cache age: ${Math.round((now - cacheTimestamp) / 1000)}s, timestamp unchanged)`);
     } else {
       const reason = !spellsCache ? 'no cache' : timestampChanged ? 'data changed' : 'cache expired';
-      console.log(`Loading fresh spells from API (reason: ${reason}, old timestamp: ${lastMappingsTimestamp}, new: ${combinedTimestamp})`);
+      console.log(`⟳ Loading fresh spells from API (reason: ${reason}, old timestamp: ${lastMappingsTimestamp}, new: ${combinedTimestamp})`);
       spells = await loadSpells();
       spellsCache = spells;
       cacheTimestamp = now;
       lastMappingsTimestamp = combinedTimestamp;
+      console.log(`✓ Cached ${spells.length} spells for future requests`);
     }
     
     // ALWAYS merge with fresh mappings (mappings can change independently of spell data)

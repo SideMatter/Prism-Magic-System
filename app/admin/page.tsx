@@ -149,12 +149,13 @@ export default function AdminPage() {
         ? selectedPrisms 
         : (prismValue || null);
       
-      console.log("Saving spell:", spellName, "with prism(s):", prismToSave);
+      console.log(`💾 Saving spell: ${spellName} with prism(s):`, prismToSave);
       
       const response = await fetch("/api/spells/update", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Cache-Control": "no-cache, no-store, must-revalidate",
         },
         body: JSON.stringify({
           spellName,
@@ -165,7 +166,7 @@ export default function AdminPage() {
       const result = await response.json();
       
       if (response.ok) {
-        console.log("Save successful:", result);
+        console.log(`✓ Save successful for ${spellName}:`, result);
         
         const updatedPrism = result.prism === null ? undefined : result.prism;
         setSpells((prev) =>
@@ -183,16 +184,21 @@ export default function AdminPage() {
         setPrismValue("");
         setSelectedPrisms([]);
         
-        // Reload entire database
-        await loadData();
-        
         // Trigger update in other tabs/pages via localStorage event
+        const timestamp = Date.now().toString();
         try {
-          localStorage.setItem('spell-update-trigger', Date.now().toString());
-          localStorage.removeItem('spell-update-trigger');
+          localStorage.setItem('spell-update-trigger', timestamp);
+          console.log(`📢 Broadcasting spell update event: ${timestamp}`);
+          // Remove after a short delay to ensure other tabs catch the event
+          setTimeout(() => {
+            localStorage.removeItem('spell-update-trigger');
+          }, 100);
         } catch (e) {
-          // Ignore localStorage errors
+          console.warn('Failed to trigger localStorage event:', e);
         }
+        
+        // Reload entire database to get fresh data
+        await loadData();
         
         showStatus("success", `Prism mapping for "${spellName}" saved successfully!`);
       } else {

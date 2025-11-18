@@ -49,11 +49,19 @@ export default function Home() {
   const loadSpells = async (showLoading = true) => {
     if (showLoading) setLoading(true);
     try {
-      const response = await fetch("/api/spells", {
-        cache: 'no-store', // Always fetch fresh data
+      // Add cache-busting query param to ensure fresh data
+      const cacheBuster = Date.now();
+      const response = await fetch(`/api/spells?_=${cacheBuster}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+        },
       });
       const data = await response.json();
       const cacheTimestamp = response.headers.get('X-Cache-Timestamp') || "";
+      
+      console.log(`✓ Loaded ${data.length} spells from API (timestamp: ${cacheTimestamp})`);
       
       setSpells(data);
       setFilteredSpells(data);
@@ -67,7 +75,7 @@ export default function Home() {
         }
       }
     } catch (error) {
-      console.error("Error loading spells:", error);
+      console.error("❌ Error loading spells:", error);
     } finally {
       if (showLoading) setLoading(false);
     }
