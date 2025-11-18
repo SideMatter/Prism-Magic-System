@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Save, Search, X } from "lucide-react";
 
 interface Spell {
@@ -43,6 +43,40 @@ export default function AdminPage() {
     prism: [] as string[],
   });
   const [creatingCustomSpell, setCreatingCustomSpell] = useState(false);
+  const [editingCustomSpell, setEditingCustomSpell] = useState<SpellWithPrism | null>(null);
+  const [editCustomSpellForm, setEditCustomSpellForm] = useState({
+    name: "",
+    level: 0,
+    school: "",
+    casting_time: "",
+    range: "",
+    components: "",
+    duration: "",
+    description: "",
+    prism: [] as string[],
+  });
+  const [updatingCustomSpell, setUpdatingCustomSpell] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const statusTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showStatus = (type: "success" | "error", text: string) => {
+    if (statusTimeoutRef.current) {
+      clearTimeout(statusTimeoutRef.current);
+    }
+    setStatusMessage({ type, text });
+    statusTimeoutRef.current = setTimeout(() => {
+      setStatusMessage(null);
+      statusTimeoutRef.current = null;
+    }, 4000);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (statusTimeoutRef.current) {
+        clearTimeout(statusTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     loadData();
@@ -133,9 +167,7 @@ export default function AdminPage() {
       if (response.ok) {
         console.log("Save successful:", result);
         
-        // Update local state immediately with the value returned from the server
-        const updatedPrism = result.prism || undefined;
-        
+        const updatedPrism = result.prism === null ? undefined : result.prism;
         setSpells((prev) =>
           prev.map((s) =>
             s.name === spellName ? { ...s, prism: updatedPrism } : s
@@ -151,30 +183,39 @@ export default function AdminPage() {
         setPrismValue("");
         setSelectedPrisms([]);
         
+        // Reload entire database
+        await loadData();
+        
         // Trigger update in other tabs/pages via localStorage event
         try {
           localStorage.setItem('spell-update-trigger', Date.now().toString());
-          localStorage.removeItem('spell-update-trigger'); // Clean up immediately
+          localStorage.removeItem('spell-update-trigger');
         } catch (e) {
           // Ignore localStorage errors
         }
         
-        // Don't reload - trust the optimistic update
-        // The change is already in Redis and will be reflected on search page
+        showStatus("success", `Prism mapping for "${spellName}" saved successfully!`);
       } else {
         console.error("Save failed:", result);
-        alert(`Failed to save: ${result.error || "Please try again."}`);
+        showStatus("error", `Failed to save: ${result.error || "Please try again."}`);
       }
     } catch (error) {
       console.error("Error saving:", error);
-      alert(`Error saving: ${error instanceof Error ? error.message : "Please try again."}`);
+      showStatus(
+        "error",
+        `Error saving: ${error instanceof Error ? error.message : "Please try again."}`
+      );
     } finally {
       setSaving(false);
     }
   };
 
   const handleAddPrism = async () => {
-    if (!newPrism.trim()) return;
+    const prismName = newPrism.trim();
+    if (!prismName) {
+      showStatus("error", "Please enter a prism name before adding.");
+      return;
+    }
 
     try {
       const response = await fetch("/api/prisms", {
@@ -182,20 +223,21 @@ export default function AdminPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ name: newPrism.trim() }),
+        body: JSON.stringify({ name: prismName }),
       });
 
       if (response.ok) {
         // Reload data to get fresh prism list
         await loadData();
         setNewPrism("");
+        showStatus("success", `Prism "${prismName}" added successfully!`);
       } else {
         const error = await response.json().catch(() => ({ error: "Unknown error" }));
-        alert(`Failed to add prism: ${error.error || "It may already exist."}`);
+        showStatus("error", `Failed to add prism: ${error.error || "It may already exist."}`);
       }
     } catch (error) {
       console.error("Error adding prism:", error);
-      alert("Error adding prism. Please try again.");
+      showStatus("error", "Error adding prism. Please try again.");
     }
   };
 
@@ -204,6 +246,7 @@ export default function AdminPage() {
       return;
     }
 
+    setLoading(true);
     try {
       const response = await fetch("/api/prisms", {
         method: "DELETE",
@@ -214,15 +257,18 @@ export default function AdminPage() {
       });
 
       if (response.ok) {
-        // Reload data to get fresh state
+        // Reload entire database
         await loadData();
+        showStatus("success", `Prism "${prismName}" removed successfully!`);
       } else {
         const error = await response.json().catch(() => ({ error: "Unknown error" }));
-        alert(`Failed to remove prism: ${error.error || "Unknown error"}`);
+        showStatus("error", `Failed to remove prism: ${error.error || "Unknown error"}`);
       }
     } catch (error) {
       console.error("Error removing prism:", error);
-      alert("Error removing prism. Please try again.");
+      showStatus("error", "Error removing prism. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -231,7 +277,7 @@ export default function AdminPage() {
         !customSpellForm.casting_time.trim() || !customSpellForm.range.trim() ||
         !customSpellForm.components.trim() || !customSpellForm.duration.trim() ||
         !customSpellForm.description.trim()) {
-      alert("Please fill in all required fields.");
+      showStatus("error", "Please fill in all required fields before creating a spell.");
       return;
     }
 
@@ -252,6 +298,9 @@ export default function AdminPage() {
       
       if (response.ok) {
         console.log("Custom spell created successfully:", result);
+        
+        const spellName = customSpellForm.name;
+        
         // Reset form
         setCustomSpellForm({
           name: "",
@@ -265,8 +314,10 @@ export default function AdminPage() {
           prism: [],
         });
         setShowCustomSpellForm(false);
-        // Reload data
+        
+        // Reload entire database
         await loadData();
+        
         // Trigger update in other tabs/pages
         try {
           localStorage.setItem('spell-update-trigger', Date.now().toString());
@@ -274,15 +325,17 @@ export default function AdminPage() {
         } catch (e) {
           // Ignore localStorage errors
         }
+        
+        showStatus("success", `Custom spell "${spellName}" created successfully!`);
       } else {
         console.error("Failed to create custom spell:", result);
         const errorMsg = result.error || result.details || "Unknown error";
-        alert(`Failed to create custom spell: ${errorMsg}`);
+        showStatus("error", `Failed to create custom spell: ${errorMsg}`);
       }
     } catch (error) {
       console.error("Error creating custom spell:", error);
       const errorMsg = error instanceof Error ? error.message : "Unknown error";
-      alert(`Error creating custom spell: ${errorMsg}`);
+      showStatus("error", `Error creating custom spell: ${errorMsg}`);
     } finally {
       setCreatingCustomSpell(false);
     }
@@ -293,6 +346,7 @@ export default function AdminPage() {
       return;
     }
 
+    setLoading(true);
     try {
       const response = await fetch("/api/custom-spells", {
         method: "DELETE",
@@ -303,8 +357,15 @@ export default function AdminPage() {
       });
 
       if (response.ok) {
-        // Reload data
+        console.log("Custom spell deleted successfully");
+        
+        // Optimistically update UI
+        setSpells((prev) => prev.filter((s) => s.name !== spellName));
+        setFilteredSpells((prev) => prev.filter((s) => s.name !== spellName));
+        
+        // Reload entire database to reflect deletion
         await loadData();
+        
         // Trigger update in other tabs/pages
         try {
           localStorage.setItem('spell-update-trigger', Date.now().toString());
@@ -312,13 +373,99 @@ export default function AdminPage() {
         } catch (e) {
           // Ignore localStorage errors
         }
+        
+        showStatus("success", `Custom spell "${spellName}" deleted successfully!`);
       } else {
         const error = await response.json().catch(() => ({ error: "Unknown error" }));
-        alert(`Failed to delete custom spell: ${error.error || "Unknown error"}`);
+        showStatus("error", `Failed to delete custom spell: ${error.error || "Unknown error"}`);
       }
     } catch (error) {
       console.error("Error deleting custom spell:", error);
-      alert("Error deleting custom spell. Please try again.");
+      showStatus("error", "Error deleting custom spell. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditCustomSpell = (spell: SpellWithPrism) => {
+    setEditingCustomSpell(spell);
+    setEditCustomSpellForm({
+      name: spell.name,
+      level: spell.level,
+      school: spell.school,
+      casting_time: spell.casting_time,
+      range: spell.range,
+      components: spell.components,
+      duration: spell.duration,
+      description: spell.description,
+      prism: Array.isArray(spell.prism) ? spell.prism : (spell.prism ? [spell.prism] : []),
+    });
+  };
+
+  const handleUpdateCustomSpell = async () => {
+    if (!editingCustomSpell) return;
+
+    if (!editCustomSpellForm.name.trim() || !editCustomSpellForm.school.trim() || 
+        !editCustomSpellForm.casting_time.trim() || !editCustomSpellForm.range.trim() ||
+        !editCustomSpellForm.components.trim() || !editCustomSpellForm.duration.trim() ||
+        !editCustomSpellForm.description.trim()) {
+      showStatus("error", "Please fill in all required fields before updating.");
+      return;
+    }
+
+    const originalName = editingCustomSpell.name;
+    setUpdatingCustomSpell(true);
+    try {
+      const response = await fetch("/api/custom-spells", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          originalName: editingCustomSpell.name,
+          ...editCustomSpellForm,
+          prism: editCustomSpellForm.prism.length > 0 ? editCustomSpellForm.prism : undefined,
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        console.log("Custom spell updated successfully:", result);
+        setEditingCustomSpell(null);
+        
+        // Optimistically update UI
+        const updatedSpell = { ...result.spell, isCustom: true };
+        setSpells((prev) =>
+          prev.map((s) => (s.name === originalName ? updatedSpell : s))
+        );
+        setFilteredSpells((prev) =>
+          prev.map((s) => (s.name === originalName ? updatedSpell : s))
+        );
+        
+        // Reload entire database
+        await loadData();
+        
+        // Trigger update in other tabs/pages
+        try {
+          localStorage.setItem('spell-update-trigger', Date.now().toString());
+          localStorage.removeItem('spell-update-trigger');
+        } catch (e) {
+          // Ignore localStorage errors
+        }
+        
+        showStatus("success", `Custom spell "${originalName}" updated successfully!`);
+      } else {
+        console.error("Failed to update custom spell:", result);
+        const errorMsg = result.error || result.details || "Unknown error";
+        showStatus("error", `Failed to update custom spell: ${errorMsg}`);
+      }
+    } catch (error) {
+      console.error("Error updating custom spell:", error);
+      const errorMsg = error instanceof Error ? error.message : "Unknown error";
+      showStatus("error", `Error updating custom spell: ${errorMsg}`);
+    } finally {
+      setUpdatingCustomSpell(false);
     }
   };
 
@@ -333,6 +480,177 @@ export default function AdminPage() {
             Manage spell-to-prism mappings
           </p>
         </div>
+
+        {statusMessage && (
+          <div
+            className={`mb-6 rounded-lg border px-4 py-3 text-sm font-medium ${
+              statusMessage.type === "success"
+                ? "bg-green-50 border-green-200 text-green-800 dark:bg-green-900/30 dark:border-green-700 dark:text-green-100"
+                : "bg-red-50 border-red-200 text-red-800 dark:bg-red-900/30 dark:border-red-700 dark:text-red-100"
+            }`}
+          >
+            {statusMessage.text}
+          </div>
+        )}
+
+        {/* Edit Custom Spell Modal */}
+        {editingCustomSpell && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
+                  Edit Custom Spell: {editingCustomSpell.name}
+                </h2>
+                <button
+                  onClick={() => setEditingCustomSpell(null)}
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Spell Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={editCustomSpellForm.name}
+                    onChange={(e) => setEditCustomSpellForm({ ...editCustomSpellForm, name: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Level *
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="9"
+                    value={editCustomSpellForm.level}
+                    onChange={(e) => setEditCustomSpellForm({ ...editCustomSpellForm, level: parseInt(e.target.value) || 0 })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    School *
+                  </label>
+                  <input
+                    type="text"
+                    value={editCustomSpellForm.school}
+                    onChange={(e) => setEditCustomSpellForm({ ...editCustomSpellForm, school: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Casting Time *
+                  </label>
+                  <input
+                    type="text"
+                    value={editCustomSpellForm.casting_time}
+                    onChange={(e) => setEditCustomSpellForm({ ...editCustomSpellForm, casting_time: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Range *
+                  </label>
+                  <input
+                    type="text"
+                    value={editCustomSpellForm.range}
+                    onChange={(e) => setEditCustomSpellForm({ ...editCustomSpellForm, range: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Components *
+                  </label>
+                  <input
+                    type="text"
+                    value={editCustomSpellForm.components}
+                    onChange={(e) => setEditCustomSpellForm({ ...editCustomSpellForm, components: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Duration *
+                  </label>
+                  <input
+                    type="text"
+                    value={editCustomSpellForm.duration}
+                    onChange={(e) => setEditCustomSpellForm({ ...editCustomSpellForm, duration: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Prisms (optional)
+                  </label>
+                  <div className="flex flex-wrap gap-1 p-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-700 min-h-[40px]">
+                    {availablePrisms.map((prism) => {
+                      const isSelected = editCustomSpellForm.prism.includes(prism);
+                      return (
+                        <button
+                          key={prism}
+                          type="button"
+                          onClick={() => {
+                            setEditCustomSpellForm({
+                              ...editCustomSpellForm,
+                              prism: isSelected
+                                ? editCustomSpellForm.prism.filter(p => p !== prism)
+                                : [...editCustomSpellForm.prism, prism]
+                            });
+                          }}
+                          className={`px-2 py-1 rounded-full text-xs font-semibold transition-colors ${
+                            isSelected
+                              ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+                              : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-500'
+                          }`}
+                        >
+                          {prism}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Description *
+                  </label>
+                  <textarea
+                    value={editCustomSpellForm.description}
+                    onChange={(e) => setEditCustomSpellForm({ ...editCustomSpellForm, description: e.target.value })}
+                    rows={6}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+              </div>
+              
+              <div className="mt-6 flex justify-end gap-2">
+                <button
+                  onClick={() => setEditingCustomSpell(null)}
+                  className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleUpdateCustomSpell}
+                  disabled={updatingCustomSpell}
+                  className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50"
+                >
+                  {updatingCustomSpell ? "Updating..." : "Update Spell"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Custom Spell Creation */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-8">
@@ -659,28 +977,45 @@ export default function AdminPage() {
                           </span>
                         )}
                       </div>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleEdit(spell);
-                        }}
-                        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-                      >
-                        {spell.prism ? "Edit" : "Assign"}
-                      </button>
-                      {spell.isCustom && (
+                      
+                      {spell.isCustom ? (
+                        // Custom spell buttons
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleEditCustomSpell(spell);
+                            }}
+                            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleDeleteCustomSpell(spell.name);
+                            }}
+                            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      ) : (
+                        // Regular spell button (prism assignment only)
                         <button
                           type="button"
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            handleDeleteCustomSpell(spell.name);
+                            handleEdit(spell);
                           }}
-                          className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                          className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
                         >
-                          Delete
+                          {spell.prism ? "Edit Prism" : "Assign Prism"}
                         </button>
                       )}
                     </div>

@@ -1,0 +1,363 @@
+
+> prism-magic-system@0.1.0 dev
+> next dev
+
+ ⚠ Port 3000 is in use, trying 3001 instead.
+  ▲ Next.js 14.2.0
+  - Local:        http://localhost:3001
+  - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 1403ms
+ ✓ Compiled /api/custom-spells in 329ms (128 modules)
+Received custom spell creation request: {
+  name: 'TestSpell',
+  level: 1,
+  school: 'Evocation',
+  casting_time: '1 action',
+  range: '60 feet',
+  components: 'V,S',
+  duration: 'Instantaneous',
+  description: 'Test description'
+}
+Connected to Redis via REDIS_URL
+(node:48684) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+Creating custom spell: {
+  name: 'TestSpell',
+  level: 1,
+  school: 'Evocation',
+  casting_time: '1 action',
+  range: '60 feet',
+  components: 'V,S',
+  duration: 'Instantaneous',
+  description: 'Test description',
+  prism: undefined
+}
+Save result: true
+ POST /api/custom-spells 200 in 836ms
+ GET /api/custom-spells 200 in 63ms
+ ✓ Compiled /api/spells in 58ms (130 modules)
+Connected to Redis via REDIS_URL
+Loaded 436 mappings from storage
+Created normalized lookup map with 433 entries
+Loading fresh spells from API (reason: no cache, old timestamp: 0, new: 1763429009055)
+Loaded 319 spells from D&D 5e API
+Returning 320 spells (319 regular, 1 custom, 273 with prism assignments, 436 mappings in DB)
+ GET /api/spells 200 in 672ms
+Loaded 437 mappings from storage
+Created normalized lookup map with 434 entries
+Loading fresh spells from API (reason: mappings changed, old timestamp: 1763429009055, new: 1763429513688)
+Loaded 319 spells from D&D 5e API
+Returning 321 spells (319 regular, 2 custom, 274 with prism assignments, 437 mappings in DB)
+ GET /api/spells 200 in 388ms
+Loaded 437 mappings from storage
+Created normalized lookup map with 434 entries
+Using cached spells (cache age: 5s, mappings unchanged)
+Returning 321 spells (319 regular, 2 custom, 274 with prism assignments, 437 mappings in DB)
+ GET /api/spells 200 in 332ms
+ ⨯ Error: Cannot find module './948.js'
+Require stack:
+- /Users/alexlyman/Documents/GitHub/Prism-Magic-System/.next/server/webpack-runtime.js
+- /Users/alexlyman/Documents/GitHub/Prism-Magic-System/.next/server/app/api/spells/route.js
+- /Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/require.js
+- /Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/load-components.js
+- /Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/build/utils.js
+- /Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/dev/hot-middleware.js
+- /Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/dev/hot-reloader-webpack.js
+- /Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/lib/router-utils/setup-dev-bundler.js
+- /Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/lib/router-server.js
+- /Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/lib/start-server.js
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1420:15)
+    at /Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/require-hook.js:55:36
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1058:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1063:22)
+    at Module._load (node:internal/modules/cjs/loader:1226:37)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:245:24)
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1503:12)
+    at mod.require (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/require-hook.js:65:28)
+    at require (node:internal/modules/helpers:152:16)
+    at __webpack_require__.f.require (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/.next/server/webpack-runtime.js:186:28)
+    at /Users/alexlyman/Documents/GitHub/Prism-Magic-System/.next/server/webpack-runtime.js:113:40
+    at Array.reduce (<anonymous>)
+    at __webpack_require__.e (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/.next/server/webpack-runtime.js:112:67)
+    at Array.map (<anonymous>)
+    at __webpack_require__.X (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/.next/server/webpack-runtime.js:150:22)
+    at /Users/alexlyman/Documents/GitHub/Prism-Magic-System/.next/server/app/api/custom-spells/route.js:1:12548
+    at Object.<anonymous> (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/.next/server/app/api/custom-spells/route.js:1:12593)
+    at Module._compile (node:internal/modules/cjs/loader:1760:14)
+    at Object..js (node:internal/modules/cjs/loader:1892:10)
+    at Module.load (node:internal/modules/cjs/loader:1480:32)
+    at Module._load (node:internal/modules/cjs/loader:1299:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:245:24)
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1503:12)
+    at mod.require (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/require-hook.js:65:28)
+    at require (node:internal/modules/helpers:152:16)
+    at requirePage (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/require.js:109:84)
+    at /Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/load-components.js:98:84
+    at async loadComponentsImpl (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/load-components.js:98:26)
+    at async DevServer.findPageComponentsImpl (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/next-server.js:710:36)
+    at async DevServer.findPageComponents (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/dev/next-dev-server.js:577:20)
+    at async DevServer.renderPageComponent (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/base-server.js:1905:24)
+    at async DevServer.renderToResponseImpl (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/base-server.js:1957:32)
+    at async DevServer.pipeImpl (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/base-server.js:915:25)
+    at async NextNodeServer.handleCatchallRenderRequest (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/next-server.js:272:17)
+    at async DevServer.handleRequestImpl (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/base-server.js:811:17)
+    at async /Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/dev/next-dev-server.js:339:20
+    at async Span.traceAsyncFn (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/trace/trace.js:154:20)
+    at async DevServer.handleRequest (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/dev/next-dev-server.js:336:24)
+    at async invokeRender (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/lib/router-server.js:174:21)
+    at async handleRequest (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/lib/router-server.js:353:24)
+    at async requestHandlerImpl (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/lib/router-server.js:377:13)
+    at async Server.requestListener (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/lib/start-server.js:141:13) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [
+    '/Users/alexlyman/Documents/GitHub/Prism-Magic-System/.next/server/webpack-runtime.js',
+    '/Users/alexlyman/Documents/GitHub/Prism-Magic-System/.next/server/app/api/spells/route.js',
+    '/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/require.js',
+    '/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/load-components.js',
+    '/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/build/utils.js',
+    '/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/dev/hot-middleware.js',
+    '/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/dev/hot-reloader-webpack.js',
+    '/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/lib/router-utils/setup-dev-bundler.js',
+    '/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/lib/router-server.js',
+    '/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/lib/start-server.js'
+  ],
+  page: '/api/custom-spells'
+}
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 1146ms (550 modules)
+ ⨯ Error: Cannot find module './chunks/vendor-chunks/next.js'
+Require stack:
+- /Users/alexlyman/Documents/GitHub/Prism-Magic-System/.next/server/webpack-runtime.js
+- /Users/alexlyman/Documents/GitHub/Prism-Magic-System/.next/server/pages/_document.js
+- /Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/require.js
+- /Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/load-components.js
+- /Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/build/utils.js
+- /Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/dev/hot-middleware.js
+- /Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/dev/hot-reloader-webpack.js
+- /Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/lib/router-utils/setup-dev-bundler.js
+- /Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/lib/router-server.js
+- /Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/lib/start-server.js
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1420:15)
+    at /Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/require-hook.js:55:36
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1058:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1063:22)
+    at Module._load (node:internal/modules/cjs/loader:1226:37)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:245:24)
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1503:12)
+    at mod.require (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/require-hook.js:65:28)
+    at require (node:internal/modules/helpers:152:16)
+    at t.f.require (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/.next/server/webpack-runtime.js:1:1416)
+    at /Users/alexlyman/Documents/GitHub/Prism-Magic-System/.next/server/webpack-runtime.js:1:889
+    at Array.reduce (<anonymous>)
+    at t.e (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/.next/server/webpack-runtime.js:1:868)
+    at Array.map (<anonymous>)
+    at t.X (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/.next/server/webpack-runtime.js:1:1189)
+    at /Users/alexlyman/Documents/GitHub/Prism-Magic-System/.next/server/pages/_document.js:63:47
+    at Object.<anonymous> (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/.next/server/pages/_document.js:66:3)
+    at Module._compile (node:internal/modules/cjs/loader:1760:14)
+    at Object..js (node:internal/modules/cjs/loader:1892:10)
+    at Module.load (node:internal/modules/cjs/loader:1480:32)
+    at Module._load (node:internal/modules/cjs/loader:1299:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:245:24)
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1503:12)
+    at mod.require (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/require-hook.js:65:28)
+    at require (node:internal/modules/helpers:152:16)
+    at requirePage (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/require.js:109:84)
+    at /Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/load-components.js:72:65
+    at async Promise.all (index 0)
+    at async loadComponentsImpl (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/load-components.js:71:33)
+    at async DevServer.findPageComponentsImpl (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/next-server.js:710:36) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [
+    '/Users/alexlyman/Documents/GitHub/Prism-Magic-System/.next/server/webpack-runtime.js',
+    '/Users/alexlyman/Documents/GitHub/Prism-Magic-System/.next/server/pages/_document.js',
+    '/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/require.js',
+    '/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/load-components.js',
+    '/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/build/utils.js',
+    '/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/dev/hot-middleware.js',
+    '/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/dev/hot-reloader-webpack.js',
+    '/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/lib/router-utils/setup-dev-bundler.js',
+    '/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/lib/router-server.js',
+    '/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/lib/start-server.js'
+  ]
+}
+ DELETE /api/custom-spells 500 in 1424ms
+Connected to Redis via REDIS_URL
+ DELETE /api/custom-spells 404 in 426ms
+ ✓ Compiled /api/spells in 22ms (170 modules)
+Connected to Redis via REDIS_URL
+Loaded 437 mappings from storage
+Created normalized lookup map with 434 entries
+Loading fresh spells from API (reason: no cache, old timestamp: 0, new: 1763429652422)
+Loaded 319 spells from D&D 5e API
+Returning 321 spells (319 regular, 2 custom, 274 with prism assignments, 437 mappings in DB)
+ GET /api/spells 200 in 572ms
+ DELETE /api/custom-spells 200 in 407ms
+Loaded 436 mappings from storage
+Created normalized lookup map with 433 entries
+Loading fresh spells from API (reason: mappings changed, old timestamp: 1763429652422, new: 1763429720087)
+Loaded 319 spells from D&D 5e API
+Returning 320 spells (319 regular, 1 custom, 273 with prism assignments, 436 mappings in DB)
+ GET /api/spells 200 in 374ms
+ ✓ Compiled in 72ms (48 modules)
+ ✓ Compiled /api/spells in 142ms (167 modules)
+Connected to Redis via REDIS_URL
+Loaded 435 mappings from storage
+Created normalized lookup map with 432 entries
+Loading fresh spells from API (reason: no cache, old timestamp: 0, new: 1763429782446)
+Loaded 319 spells from D&D 5e API
+Returning 319 spells (319 regular, 0 custom, 272 with prism assignments, 435 mappings in DB)
+ GET /api/spells 200 in 829ms
+ ✓ Compiled /api/custom-spells in 17ms (169 modules)
+ ⨯ Error: Cannot find module './948.js'
+Require stack:
+- /Users/alexlyman/Documents/GitHub/Prism-Magic-System/.next/server/webpack-runtime.js
+- /Users/alexlyman/Documents/GitHub/Prism-Magic-System/.next/server/app/api/custom-spells/route.js
+- /Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/require.js
+- /Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/load-components.js
+- /Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/build/utils.js
+- /Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/dev/hot-middleware.js
+- /Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/dev/hot-reloader-webpack.js
+- /Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/lib/router-utils/setup-dev-bundler.js
+- /Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/lib/router-server.js
+- /Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/lib/start-server.js
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1420:15)
+    at /Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/require-hook.js:55:36
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1058:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1063:22)
+    at Module._load (node:internal/modules/cjs/loader:1226:37)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:245:24)
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1503:12)
+    at mod.require (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/require-hook.js:65:28)
+    at require (node:internal/modules/helpers:152:16)
+    at __webpack_require__.f.require (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/.next/server/webpack-runtime.js:186:28)
+    at /Users/alexlyman/Documents/GitHub/Prism-Magic-System/.next/server/webpack-runtime.js:113:40
+    at Array.reduce (<anonymous>)
+    at __webpack_require__.e (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/.next/server/webpack-runtime.js:112:67)
+    at Array.map (<anonymous>)
+    at __webpack_require__.X (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/.next/server/webpack-runtime.js:150:22)
+    at /Users/alexlyman/Documents/GitHub/Prism-Magic-System/.next/server/app/api/custom-spells/route.js:1:12548
+    at Object.<anonymous> (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/.next/server/app/api/custom-spells/route.js:1:12593)
+    at Module._compile (node:internal/modules/cjs/loader:1760:14)
+    at Object..js (node:internal/modules/cjs/loader:1892:10)
+    at Module.load (node:internal/modules/cjs/loader:1480:32)
+    at Module._load (node:internal/modules/cjs/loader:1299:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:245:24)
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1503:12)
+    at mod.require (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/require-hook.js:65:28)
+    at require (node:internal/modules/helpers:152:16)
+    at requirePage (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/require.js:109:84)
+    at /Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/load-components.js:98:84
+    at async loadComponentsImpl (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/load-components.js:98:26)
+    at async DevServer.findPageComponentsImpl (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/next-server.js:710:36)
+    at async DevServer.findPageComponents (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/dev/next-dev-server.js:577:20)
+    at async DevServer.renderPageComponent (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/base-server.js:1905:24)
+    at async DevServer.renderToResponseImpl (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/base-server.js:1957:32)
+    at async DevServer.pipeImpl (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/base-server.js:915:25)
+    at async NextNodeServer.handleCatchallRenderRequest (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/next-server.js:272:17)
+    at async DevServer.handleRequestImpl (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/base-server.js:811:17)
+    at async /Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/dev/next-dev-server.js:339:20
+    at async Span.traceAsyncFn (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/trace/trace.js:154:20)
+    at async DevServer.handleRequest (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/dev/next-dev-server.js:336:24)
+    at async invokeRender (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/lib/router-server.js:174:21)
+    at async handleRequest (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/lib/router-server.js:353:24)
+    at async requestHandlerImpl (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/lib/router-server.js:377:13)
+    at async Server.requestListener (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/lib/start-server.js:141:13) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [
+    '/Users/alexlyman/Documents/GitHub/Prism-Magic-System/.next/server/webpack-runtime.js',
+    '/Users/alexlyman/Documents/GitHub/Prism-Magic-System/.next/server/app/api/custom-spells/route.js',
+    '/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/require.js',
+    '/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/load-components.js',
+    '/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/build/utils.js',
+    '/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/dev/hot-middleware.js',
+    '/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/dev/hot-reloader-webpack.js',
+    '/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/lib/router-utils/setup-dev-bundler.js',
+    '/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/lib/router-server.js',
+    '/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/lib/start-server.js'
+  ],
+  page: '/api/custom-spells'
+}
+ ✓ Compiled /_error in 82ms (552 modules)
+ DELETE /api/custom-spells 500 in 137ms
+ ⨯ Error: Cannot find module './948.js'
+Require stack:
+- /Users/alexlyman/Documents/GitHub/Prism-Magic-System/.next/server/webpack-runtime.js
+- /Users/alexlyman/Documents/GitHub/Prism-Magic-System/.next/server/pages/_document.js
+- /Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/require.js
+- /Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/load-components.js
+- /Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/build/utils.js
+- /Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/dev/hot-middleware.js
+- /Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/dev/hot-reloader-webpack.js
+- /Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/lib/router-utils/setup-dev-bundler.js
+- /Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/lib/router-server.js
+- /Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/lib/start-server.js
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1420:15)
+    at /Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/require-hook.js:55:36
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1058:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1063:22)
+    at Module._load (node:internal/modules/cjs/loader:1226:37)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:245:24)
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1503:12)
+    at mod.require (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/require-hook.js:65:28)
+    at require (node:internal/modules/helpers:152:16)
+    at __webpack_require__.f.require (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/.next/server/webpack-runtime.js:186:28)
+    at /Users/alexlyman/Documents/GitHub/Prism-Magic-System/.next/server/webpack-runtime.js:113:40
+    at Array.reduce (<anonymous>)
+    at __webpack_require__.e (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/.next/server/webpack-runtime.js:112:67)
+    at Array.map (<anonymous>)
+    at __webpack_require__.X (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/.next/server/webpack-runtime.js:150:22)
+    at /Users/alexlyman/Documents/GitHub/Prism-Magic-System/.next/server/app/api/custom-spells/route.js:1:12548
+    at Object.<anonymous> (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/.next/server/app/api/custom-spells/route.js:1:12593)
+    at Module._compile (node:internal/modules/cjs/loader:1760:14)
+    at Object..js (node:internal/modules/cjs/loader:1892:10)
+    at Module.load (node:internal/modules/cjs/loader:1480:32)
+    at Module._load (node:internal/modules/cjs/loader:1299:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:245:24)
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1503:12)
+    at mod.require (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/require-hook.js:65:28)
+    at require (node:internal/modules/helpers:152:16)
+    at requirePage (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/require.js:109:84)
+    at /Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/load-components.js:98:84
+    at async loadComponentsImpl (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/load-components.js:98:26)
+    at async DevServer.findPageComponentsImpl (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/next-server.js:710:36)
+    at async DevServer.findPageComponents (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/dev/next-dev-server.js:577:20)
+    at async DevServer.renderPageComponent (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/base-server.js:1905:24)
+    at async DevServer.renderToResponseImpl (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/base-server.js:1957:32)
+    at async DevServer.pipeImpl (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/base-server.js:915:25)
+    at async NextNodeServer.handleCatchallRenderRequest (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/next-server.js:272:17)
+    at async DevServer.handleRequestImpl (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/base-server.js:811:17)
+    at async /Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/dev/next-dev-server.js:339:20
+    at async Span.traceAsyncFn (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/trace/trace.js:154:20)
+    at async DevServer.handleRequest (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/dev/next-dev-server.js:336:24)
+    at async invokeRender (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/lib/router-server.js:174:21)
+    at async handleRequest (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/lib/router-server.js:353:24)
+    at async requestHandlerImpl (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/lib/router-server.js:377:13)
+    at async Server.requestListener (/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/lib/start-server.js:141:13) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [
+    '/Users/alexlyman/Documents/GitHub/Prism-Magic-System/.next/server/webpack-runtime.js',
+    '/Users/alexlyman/Documents/GitHub/Prism-Magic-System/.next/server/pages/_document.js',
+    '/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/require.js',
+    '/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/load-components.js',
+    '/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/build/utils.js',
+    '/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/dev/hot-middleware.js',
+    '/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/dev/hot-reloader-webpack.js',
+    '/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/lib/router-utils/setup-dev-bundler.js',
+    '/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/lib/router-server.js',
+    '/Users/alexlyman/Documents/GitHub/Prism-Magic-System/node_modules/next/dist/server/lib/start-server.js'
+  ],
+  page: '/api/custom-spells'
+}
+ DELETE /api/custom-spells 500 in 7ms
+[?25h

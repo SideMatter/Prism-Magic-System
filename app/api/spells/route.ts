@@ -237,20 +237,20 @@ export async function GET(request: Request) {
     // 2. Custom spells timestamp changed (someone added/removed a custom spell)
     // 3. Cache is older than 1 hour
     // 4. No cache exists yet
-    const mappingsChanged = mappingsModified !== lastMappingsTimestamp && lastMappingsTimestamp !== 0;
+    const timestampChanged = combinedTimestamp !== lastMappingsTimestamp && lastMappingsTimestamp !== 0;
     const cacheExpired = spellsCache && (now - cacheTimestamp) >= CACHE_DURATION;
-    const shouldInvalidate = !spellsCache || mappingsChanged || cacheExpired;
+    const shouldInvalidate = !spellsCache || timestampChanged || cacheExpired;
     
     if (spellsCache && !shouldInvalidate) {
       spells = spellsCache;
-      console.log(`Using cached spells (cache age: ${Math.round((now - cacheTimestamp) / 1000)}s, mappings unchanged)`);
+      console.log(`Using cached spells (cache age: ${Math.round((now - cacheTimestamp) / 1000)}s, timestamp unchanged)`);
     } else {
-      const reason = !spellsCache ? 'no cache' : mappingsChanged ? 'mappings changed' : 'cache expired';
-      console.log(`Loading fresh spells from API (reason: ${reason}, old timestamp: ${lastMappingsTimestamp}, new: ${mappingsModified})`);
+      const reason = !spellsCache ? 'no cache' : timestampChanged ? 'data changed' : 'cache expired';
+      console.log(`Loading fresh spells from API (reason: ${reason}, old timestamp: ${lastMappingsTimestamp}, new: ${combinedTimestamp})`);
       spells = await loadSpells();
       spellsCache = spells;
       cacheTimestamp = now;
-      lastMappingsTimestamp = mappingsModified;
+      lastMappingsTimestamp = combinedTimestamp;
     }
     
     // ALWAYS merge with fresh mappings (mappings can change independently of spell data)
