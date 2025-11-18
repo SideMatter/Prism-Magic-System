@@ -450,4 +450,83 @@ export const storage = {
     }
     return fileStorage.saveCustomSpells(spells);
   },
+
+  // Cache all spells from D&D API (to avoid timeouts on Vercel)
+  async loadCachedSpells(): Promise<any[] | null> {
+    if (USE_REDIS_DIRECT) {
+      const redis = await getRedisClient();
+      if (!redis) return null;
+      try {
+        const data = await redis.get("dnd-api-spells-cache");
+        if (!data) return null;
+        return JSON.parse(data);
+      } catch (error) {
+        console.error("Error loading cached spells from Redis:", error);
+        return null;
+      }
+    } else if (USE_REDIS_REST) {
+      const kv = await getKVClient();
+      if (!kv) return null;
+      try {
+        const data = await kv.get("dnd-api-spells-cache") as any[] | null;
+        return data;
+      } catch (error) {
+        console.error("Error loading cached spells from KV:", error);
+        return null;
+      }
+    }
+    // No caching for file storage (local dev can fetch from API)
+    return null;
+  },
+
+  async saveCachedSpells(spells: any[]): Promise<boolean> {
+    if (USE_REDIS_DIRECT) {
+      const redis = await getRedisClient();
+      if (!redis) return false;
+      try {
+        await redis.set("dnd-api-spells-cache", JSON.stringify(spells));
+        // Also save timestamp
+        await redis.set("dnd-api-spells-cache-timestamp", Date.now().toString());
+        return true;
+      } catch (error) {
+        console.error("Error saving cached spells to Redis:", error);
+        return false;
+      }
+    } else if (USE_REDIS_REST) {
+      const kv = await getKVClient();
+      if (!kv) return false;
+      try {
+        await kv.set("dnd-api-spells-cache", spells);
+        await kv.set("dnd-api-spells-cache-timestamp", Date.now().toString());
+        return true;
+      } catch (error) {
+        console.error("Error saving cached spells to KV:", error);
+        return false;
+      }
+    }
+    return false;
+  },
+
+  async getCachedSpellsTimestamp(): Promise<number> {
+    if (USE_REDIS_DIRECT) {
+      const redis = await getRedisClient();
+      if (!redis) return 0;
+      try {
+        const timestamp = await redis.get("dnd-api-spells-cache-timestamp");
+        return timestamp ? parseInt(timestamp, 10) : 0;
+      } catch (error) {
+        return 0;
+      }
+    } else if (USE_REDIS_REST) {
+      const kv = await getKVClient();
+      if (!kv) return 0;
+      try {
+        const timestamp = await kv.get("dnd-api-spells-cache-timestamp") as string | null;
+        return timestamp ? parseInt(timestamp, 10) : 0;
+      } catch (error) {
+        return 0;
+      }
+    }
+    return 0;
+  },
 };

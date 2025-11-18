@@ -3,6 +3,9 @@ import fs from "fs";
 import path from "path";
 import { storage, getMappingsTimestamp, getCustomSpellsTimestamp, CustomSpell } from "@/lib/storage";
 
+// Force dynamic rendering (not static)
+export const dynamic = 'force-dynamic';
+
 const DATA_DIR = path.join(process.cwd(), "data");
 const SPELLS_FILE = path.join(DATA_DIR, "spells.json");
 const MAPPINGS_FILE = path.join(DATA_DIR, "spell-prism-mappings.json");
@@ -235,6 +238,10 @@ function getSampleSpells() {
 
 export async function GET(request: Request) {
   try {
+    // Check if we should force refresh from API (for manual cache busting)
+    const url = new URL(request.url);
+    const forceRefresh = url.searchParams.get('refresh') === 'true';
+    
     // Load mappings (async now) - always load fresh mappings
     const mappings = await loadMappings();
     
@@ -255,21 +262,43 @@ export async function GET(request: Request) {
     // 2. Custom spells timestamp changed (someone added/removed a custom spell)
     // 3. Cache is older than 1 hour
     // 4. No cache exists yet
+    // 5. Force refresh requested
     const timestampChanged = combinedTimestamp !== lastMappingsTimestamp && lastMappingsTimestamp !== 0;
     const cacheExpired = spellsCache && (now - cacheTimestamp) >= CACHE_DURATION;
-    const shouldInvalidate = !spellsCache || timestampChanged || cacheExpired;
+    const shouldInvalidate = !spellsCache || timestampChanged || cacheExpired || forceRefresh;
     
     if (spellsCache && !shouldInvalidate) {
       spells = spellsCache;
-      console.log(`✓ Using cached ${spellsCache.length} spells (cache age: ${Math.round((now - cacheTimestamp) / 1000)}s, timestamp unchanged)`);
+      console.log(`✓ Using in-memory cache: ${spellsCache.length} spells (age: ${Math.round((now - cacheTimestamp) / 1000)}s)`);
     } else {
-      const reason = !spellsCache ? 'no cache' : timestampChanged ? 'data changed' : 'cache expired';
-      console.log(`⟳ Loading fresh spells from API (reason: ${reason}, old timestamp: ${lastMappingsTimestamp}, new: ${combinedTimestamp})`);
-      spells = await loadSpells();
+      const reason = forceRefresh ? 'force refresh' : !spellsCache ? 'no cache' : timestampChanged ? 'data changed' : 'cache expired';
+      console.log(`⟳ Loading spells (reason: ${reason})...`);
+      
+      // Try to load from Redis/KV cache first (to avoid API timeouts on Vercel)
+      const cachedSpells = await storage.loadCachedSpells();
+      const cachedTimestamp = await storage.getCachedSpellsTimestamp();
+      const cacheAge = cachedTimestamp ? (now - cachedTimestamp) / 1000 / 60 : 999999; // in minutes
+      
+      if (cachedSpells && cachedSpells.length > 0 && cacheAge < 1440 && !forceRefresh) {
+        // Use cached spells if less than 24 hours old and not force refresh
+        console.log(`✓ Using Redis/KV cache: ${cachedSpells.length} spells (age: ${Math.round(cacheAge)} minutes)`);
+        spells = cachedSpells;
+      } else {
+        // Load from D&D API (might timeout on Vercel)
+        console.log(`⟳ Fetching fresh spells from D&D 5e API...`);
+        spells = await loadSpells();
+        
+        // Save to Redis/KV cache for future requests
+        const saved = await storage.saveCachedSpells(spells);
+        if (saved) {
+          console.log(`✓ Saved ${spells.length} spells to Redis/KV cache`);
+        }
+      }
+      
       spellsCache = spells;
       cacheTimestamp = now;
       lastMappingsTimestamp = combinedTimestamp;
-      console.log(`✓ Cached ${spells.length} spells for future requests`);
+      console.log(`✓ In-memory cache updated: ${spells.length} spells`);
     }
     
     // ALWAYS merge with fresh mappings (mappings can change independently of spell data)
