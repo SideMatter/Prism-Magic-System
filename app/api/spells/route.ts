@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
-import { storage, getMappingsTimestamp } from "@/lib/storage";
+import { storage, getMappingsTimestamp, getCustomSpellsTimestamp, CustomSpell } from "@/lib/storage";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const SPELLS_FILE = path.join(DATA_DIR, "spells.json");
@@ -223,6 +223,10 @@ export async function GET(request: Request) {
     // Check if cache should be invalidated
     // Works for both file system and KV/Upstash Redis
     const mappingsModified = await getMappingsTimestamp();
+    const customSpellsModified = await getCustomSpellsTimestamp();
+    
+    // Combine both timestamps for cache key
+    const combinedTimestamp = Math.max(mappingsModified, customSpellsModified);
     
     // Check cache first
     const now = Date.now();
@@ -230,8 +234,9 @@ export async function GET(request: Request) {
     
     // Invalidate cache if:
     // 1. Mappings timestamp changed (someone saved in admin)
-    // 2. Cache is older than 1 hour
-    // 3. No cache exists yet
+    // 2. Custom spells timestamp changed (someone added/removed a custom spell)
+    // 3. Cache is older than 1 hour
+    // 4. No cache exists yet
     const mappingsChanged = mappingsModified !== lastMappingsTimestamp && lastMappingsTimestamp !== 0;
     const cacheExpired = spellsCache && (now - cacheTimestamp) >= CACHE_DURATION;
     const shouldInvalidate = !spellsCache || mappingsChanged || cacheExpired;
@@ -254,18 +259,36 @@ export async function GET(request: Request) {
       return {
         ...spell,
         prism: prism || undefined, // Explicitly set to undefined if no match
+        isCustom: false, // Mark regular spells
       };
     });
 
-    const withPrisms = spellsWithPrisms.filter(s => s.prism).length;
-    console.log(`Returning ${spellsWithPrisms.length} spells (${withPrisms} with prism assignments, ${Object.keys(mappings.original).length} mappings in DB)`);
+    // Load custom spells and merge them
+    const customSpells = await storage.loadCustomSpells();
+    const customSpellsWithPrisms = customSpells.map((spell: CustomSpell) => {
+      // Custom spells may already have prism in their data, but also check mappings
+      const prismFromMappings = findPrismForSpell(spell.name, mappings);
+      return {
+        ...spell,
+        prism: spell.prism || prismFromMappings || undefined,
+        isCustom: true, // Mark custom spells
+      };
+    });
+
+    // Combine regular and custom spells
+    const allSpells = [...spellsWithPrisms, ...customSpellsWithPrisms];
+
+    const withPrisms = allSpells.filter(s => s.prism).length;
+    console.log(`Returning ${allSpells.length} spells (${spellsWithPrisms.length} regular, ${customSpells.length} custom, ${withPrisms} with prism assignments, ${Object.keys(mappings.original).length} mappings in DB)`);
     
     // Add cache control headers to help clients know when to refresh
-    // Use mappings timestamp as cache key since mappings change more frequently
-    return NextResponse.json(spellsWithPrisms, {
+    // Use combined timestamp (mappings + custom spells) as cache key
+    return NextResponse.json(allSpells, {
       headers: {
-        'Cache-Control': 'public, max-age=60, must-revalidate',
-        'X-Cache-Timestamp': mappingsModified.toString(),
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        'X-Cache-Timestamp': combinedTimestamp.toString(),
       },
     });
   } catch (error) {

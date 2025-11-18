@@ -12,6 +12,7 @@ import path from "path";
 const DATA_DIR = path.join(process.cwd(), "data");
 const MAPPINGS_FILE = path.join(DATA_DIR, "spell-prism-mappings.json");
 const PRISMS_FILE = path.join(DATA_DIR, "prisms.json");
+const CUSTOM_SPELLS_FILE = path.join(DATA_DIR, "custom-spells.json");
 
 // Check which storage method to use
 const USE_REDIS_DIRECT = !!process.env.REDIS_URL;
@@ -61,6 +62,19 @@ async function getKVClient() {
 
 // Type for spell-prism mappings (can be single or multiple prisms)
 export type SpellPrismMappings = Record<string, string | string[]>;
+
+// Type for custom spell
+export interface CustomSpell {
+  name: string;
+  level: number;
+  school: string;
+  casting_time: string;
+  range: string;
+  components: string;
+  duration: string;
+  description: string;
+  prism?: string | string[];
+}
 
 // File system storage (local dev)
 export const fileStorage = {
@@ -116,6 +130,35 @@ export const fileStorage = {
       return true;
     } catch (error) {
       console.error("Error saving prisms to file:", error);
+      throw error;
+    }
+  },
+
+  async loadCustomSpells(): Promise<CustomSpell[]> {
+    if (!fs.existsSync(CUSTOM_SPELLS_FILE)) {
+      return [];
+    }
+    try {
+      const data = fs.readFileSync(CUSTOM_SPELLS_FILE, "utf-8");
+      return JSON.parse(data);
+    } catch (error) {
+      console.error("Error loading custom spells from file:", error);
+      return [];
+    }
+  },
+
+  async saveCustomSpells(spells: CustomSpell[]): Promise<boolean> {
+    try {
+      if (!fs.existsSync(DATA_DIR)) {
+        fs.mkdirSync(DATA_DIR, { recursive: true });
+      }
+      const tempFile = CUSTOM_SPELLS_FILE + '.tmp';
+      fs.writeFileSync(tempFile, JSON.stringify(spells, null, 2), 'utf-8');
+      fs.renameSync(tempFile, CUSTOM_SPELLS_FILE);
+      console.log(`Saved ${spells.length} custom spells to file system`);
+      return true;
+    } catch (error) {
+      console.error("Error saving custom spells to file:", error);
       throw error;
     }
   },
@@ -180,6 +223,35 @@ export const redisStorage = {
       throw error;
     }
   },
+
+  async loadCustomSpells(): Promise<CustomSpell[]> {
+    const redis = await getRedisClient();
+    if (!redis) return [];
+    
+    try {
+      const data = await redis.get("custom-spells");
+      if (!data) return [];
+      return JSON.parse(data);
+    } catch (error) {
+      console.error("Error loading custom spells from Redis:", error);
+      return [];
+    }
+  },
+
+  async saveCustomSpells(spells: CustomSpell[]): Promise<boolean> {
+    const redis = await getRedisClient();
+    if (!redis) return false;
+    
+    try {
+      await redis.set("custom-spells", JSON.stringify(spells));
+      // Update cache timestamp for invalidation
+      await redis.set("custom-spells-timestamp", Date.now().toString());
+      return true;
+    } catch (error) {
+      console.error("Error saving custom spells to Redis:", error);
+      throw error;
+    }
+  },
 };
 
 // REST API Redis storage (Vercel KV / Upstash)
@@ -239,6 +311,34 @@ export const kvStorage = {
       throw error;
     }
   },
+
+  async loadCustomSpells(): Promise<CustomSpell[]> {
+    const kv = await getKVClient();
+    if (!kv) return [];
+    
+    try {
+      const data = await kv.get("custom-spells") as CustomSpell[] | null;
+      return data || [];
+    } catch (error) {
+      console.error("Error loading custom spells from KV:", error);
+      return [];
+    }
+  },
+
+  async saveCustomSpells(spells: CustomSpell[]): Promise<boolean> {
+    const kv = await getKVClient();
+    if (!kv) return false;
+    
+    try {
+      await kv.set("custom-spells", spells);
+      // Update cache timestamp for invalidation
+      await kv.set("custom-spells-timestamp", Date.now());
+      return true;
+    } catch (error) {
+      console.error("Error saving custom spells to KV:", error);
+      throw error;
+    }
+  },
 };
 
 // Get cache timestamp for Redis (for cache invalidation)
@@ -261,6 +361,33 @@ export async function getMappingsTimestamp(): Promise<number> {
       const kv = await getKVClient();
       if (!kv) return 0;
       const timestamp = await kv.get("spell-prism-mappings-timestamp") as number | null;
+      return timestamp || 0;
+    }
+  } catch {
+    return 0;
+  }
+}
+
+// Get cache timestamp for custom spells (for cache invalidation)
+export async function getCustomSpellsTimestamp(): Promise<number> {
+  if (!USE_REDIS) {
+    // For file system, return file modification time
+    if (fs.existsSync(CUSTOM_SPELLS_FILE)) {
+      return fs.statSync(CUSTOM_SPELLS_FILE).mtimeMs;
+    }
+    return 0;
+  }
+  
+  try {
+    if (USE_REDIS_DIRECT) {
+      const redis = await getRedisClient();
+      if (!redis) return 0;
+      const timestamp = await redis.get("custom-spells-timestamp");
+      return timestamp ? parseInt(timestamp, 10) : 0;
+    } else {
+      const kv = await getKVClient();
+      if (!kv) return 0;
+      const timestamp = await kv.get("custom-spells-timestamp") as number | null;
       return timestamp || 0;
     }
   } catch {
@@ -304,5 +431,23 @@ export const storage = {
       return kvStorage.savePrisms(prisms);
     }
     return fileStorage.savePrisms(prisms);
+  },
+
+  async loadCustomSpells(): Promise<CustomSpell[]> {
+    if (USE_REDIS_DIRECT) {
+      return redisStorage.loadCustomSpells();
+    } else if (USE_REDIS_REST) {
+      return kvStorage.loadCustomSpells();
+    }
+    return fileStorage.loadCustomSpells();
+  },
+
+  async saveCustomSpells(spells: CustomSpell[]): Promise<boolean> {
+    if (USE_REDIS_DIRECT) {
+      return redisStorage.saveCustomSpells(spells);
+    } else if (USE_REDIS_REST) {
+      return kvStorage.saveCustomSpells(spells);
+    }
+    return fileStorage.saveCustomSpells(spells);
   },
 };

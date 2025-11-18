@@ -16,6 +16,7 @@ interface Spell {
 
 interface SpellWithPrism extends Spell {
   prism?: string | string[]; // Can have multiple prisms
+  isCustom?: boolean; // Indicates if this is a custom spell
 }
 
 export default function AdminPage() {
@@ -29,6 +30,19 @@ export default function AdminPage() {
   const [newPrism, setNewPrism] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showCustomSpellForm, setShowCustomSpellForm] = useState(false);
+  const [customSpellForm, setCustomSpellForm] = useState({
+    name: "",
+    level: 0,
+    school: "",
+    casting_time: "",
+    range: "",
+    components: "",
+    duration: "",
+    description: "",
+    prism: [] as string[],
+  });
+  const [creatingCustomSpell, setCreatingCustomSpell] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -212,6 +226,102 @@ export default function AdminPage() {
     }
   };
 
+  const handleCreateCustomSpell = async () => {
+    if (!customSpellForm.name.trim() || !customSpellForm.school.trim() || 
+        !customSpellForm.casting_time.trim() || !customSpellForm.range.trim() ||
+        !customSpellForm.components.trim() || !customSpellForm.duration.trim() ||
+        !customSpellForm.description.trim()) {
+      alert("Please fill in all required fields.");
+      return;
+    }
+
+    setCreatingCustomSpell(true);
+    try {
+      const response = await fetch("/api/custom-spells", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...customSpellForm,
+          prism: customSpellForm.prism.length > 0 ? customSpellForm.prism : undefined,
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        console.log("Custom spell created successfully:", result);
+        // Reset form
+        setCustomSpellForm({
+          name: "",
+          level: 0,
+          school: "",
+          casting_time: "",
+          range: "",
+          components: "",
+          duration: "",
+          description: "",
+          prism: [],
+        });
+        setShowCustomSpellForm(false);
+        // Reload data
+        await loadData();
+        // Trigger update in other tabs/pages
+        try {
+          localStorage.setItem('spell-update-trigger', Date.now().toString());
+          localStorage.removeItem('spell-update-trigger');
+        } catch (e) {
+          // Ignore localStorage errors
+        }
+      } else {
+        console.error("Failed to create custom spell:", result);
+        const errorMsg = result.error || result.details || "Unknown error";
+        alert(`Failed to create custom spell: ${errorMsg}`);
+      }
+    } catch (error) {
+      console.error("Error creating custom spell:", error);
+      const errorMsg = error instanceof Error ? error.message : "Unknown error";
+      alert(`Error creating custom spell: ${errorMsg}`);
+    } finally {
+      setCreatingCustomSpell(false);
+    }
+  };
+
+  const handleDeleteCustomSpell = async (spellName: string) => {
+    if (!confirm(`Delete custom spell "${spellName}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/custom-spells", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: spellName }),
+      });
+
+      if (response.ok) {
+        // Reload data
+        await loadData();
+        // Trigger update in other tabs/pages
+        try {
+          localStorage.setItem('spell-update-trigger', Date.now().toString());
+          localStorage.removeItem('spell-update-trigger');
+        } catch (e) {
+          // Ignore localStorage errors
+        }
+      } else {
+        const error = await response.json().catch(() => ({ error: "Unknown error" }));
+        alert(`Failed to delete custom spell: ${error.error || "Unknown error"}`);
+      }
+    } catch (error) {
+      console.error("Error deleting custom spell:", error);
+      alert("Error deleting custom spell. Please try again.");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -222,6 +332,165 @@ export default function AdminPage() {
           <p className="text-lg text-gray-600 dark:text-gray-400">
             Manage spell-to-prism mappings
           </p>
+        </div>
+
+        {/* Custom Spell Creation */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-8">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
+              Custom Spells
+            </h2>
+            <button
+              onClick={() => setShowCustomSpellForm(!showCustomSpellForm)}
+              className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
+            >
+              {showCustomSpellForm ? "Cancel" : "Create Custom Spell"}
+            </button>
+          </div>
+          
+          {showCustomSpellForm && (
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Spell Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={customSpellForm.name}
+                    onChange={(e) => setCustomSpellForm({ ...customSpellForm, name: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    placeholder="e.g., Fire Bolt"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Level *
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="9"
+                    value={customSpellForm.level}
+                    onChange={(e) => setCustomSpellForm({ ...customSpellForm, level: parseInt(e.target.value) || 0 })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    School *
+                  </label>
+                  <input
+                    type="text"
+                    value={customSpellForm.school}
+                    onChange={(e) => setCustomSpellForm({ ...customSpellForm, school: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    placeholder="e.g., Evocation"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Casting Time *
+                  </label>
+                  <input
+                    type="text"
+                    value={customSpellForm.casting_time}
+                    onChange={(e) => setCustomSpellForm({ ...customSpellForm, casting_time: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    placeholder="e.g., 1 action"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Range *
+                  </label>
+                  <input
+                    type="text"
+                    value={customSpellForm.range}
+                    onChange={(e) => setCustomSpellForm({ ...customSpellForm, range: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    placeholder="e.g., 120 feet"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Components *
+                  </label>
+                  <input
+                    type="text"
+                    value={customSpellForm.components}
+                    onChange={(e) => setCustomSpellForm({ ...customSpellForm, components: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    placeholder="e.g., V, S, M (a piece of iron)"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Duration *
+                  </label>
+                  <input
+                    type="text"
+                    value={customSpellForm.duration}
+                    onChange={(e) => setCustomSpellForm({ ...customSpellForm, duration: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    placeholder="e.g., Instantaneous"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Prisms (optional)
+                  </label>
+                  <div className="flex flex-wrap gap-1 p-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-700 min-h-[40px]">
+                    {availablePrisms.map((prism) => {
+                      const isSelected = customSpellForm.prism.includes(prism);
+                      return (
+                        <button
+                          key={prism}
+                          type="button"
+                          onClick={() => {
+                            setCustomSpellForm({
+                              ...customSpellForm,
+                              prism: isSelected
+                                ? customSpellForm.prism.filter(p => p !== prism)
+                                : [...customSpellForm.prism, prism]
+                            });
+                          }}
+                          className={`px-2 py-1 rounded-full text-xs font-semibold transition-colors ${
+                            isSelected
+                              ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+                              : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-500'
+                          }`}
+                        >
+                          {prism}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Description *
+                  </label>
+                  <textarea
+                    value={customSpellForm.description}
+                    onChange={(e) => setCustomSpellForm({ ...customSpellForm, description: e.target.value })}
+                    rows={6}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    placeholder="Enter the full spell description..."
+                  />
+                </div>
+              </div>
+              <div className="mt-4 flex justify-end">
+                <button
+                  onClick={handleCreateCustomSpell}
+                  disabled={creatingCustomSpell}
+                  className="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50"
+                >
+                  {creatingCustomSpell ? "Creating..." : "Create Spell"}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Prism Management */}
@@ -292,9 +561,16 @@ export default function AdminPage() {
               >
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
-                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">
-                      {spell.name}
-                    </h3>
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                        {spell.name}
+                      </h3>
+                      {spell.isCustom && (
+                        <span className="px-2 py-0.5 bg-green-500 text-white text-xs font-semibold rounded-full">
+                          Custom
+                        </span>
+                      )}
+                    </div>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
                       Level {spell.level} • {spell.school}
                     </p>
@@ -394,6 +670,19 @@ export default function AdminPage() {
                       >
                         {spell.prism ? "Edit" : "Assign"}
                       </button>
+                      {spell.isCustom && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleDeleteCustomSpell(spell.name);
+                          }}
+                          className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                        >
+                          Delete
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>

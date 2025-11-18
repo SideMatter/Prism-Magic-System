@@ -16,6 +16,7 @@ interface Spell {
 
 interface SpellWithPrism extends Spell {
   prism?: string | string[]; // Can have multiple prisms
+  isCustom?: boolean; // Indicates if this is a custom spell
 }
 
 export default function Home() {
@@ -414,9 +415,16 @@ export default function Home() {
                   >
                     ← Back to search
                   </button>
-                  <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-                    {selectedSpell.name}
-                  </h2>
+                  <div className="flex items-center gap-2 mb-4">
+                    <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
+                      {selectedSpell.name}
+                    </h2>
+                    {selectedSpell.isCustom && (
+                      <span className="px-3 py-1 bg-green-500 text-white text-sm font-semibold rounded-full">
+                        Custom Spell
+                      </span>
+                    )}
+                  </div>
                         {selectedSpell.prism && (
                           <div className="mb-6 p-4 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg text-white">
                             <div className="flex items-center gap-2 mb-2">
@@ -508,15 +516,22 @@ export default function Home() {
                           onClick={() => setSelectedSpell(spell)}
                           className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 hover:shadow-lg transition-shadow cursor-pointer"
                         >
-                          <div className="flex justify-between items-start">
-                            <div className="flex-1">
-                              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">
-                                {spell.name}
-                              </h3>
-                              <p className="text-sm text-gray-600 dark:text-gray-400">
-                                Level {spell.level} • {spell.school}
-                              </p>
-                            </div>
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                              {spell.name}
+                            </h3>
+                            {spell.isCustom && (
+                              <span className="px-2 py-0.5 bg-green-500 text-white text-xs font-semibold rounded-full">
+                                Custom
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            Level {spell.level} • {spell.school}
+                          </p>
+                        </div>
                             <div className="flex flex-wrap gap-1 ml-4 justify-end">
                               {spell.prism ? (
                                 Array.isArray(spell.prism) ? (

@@ -1,0 +1,41 @@
+[
+  {
+    "name": "Allomancy",
+    "level": 4,
+    "school": "Custom",
+    "casting_time": "1 Action",
+    "range": "120 ft",
+    "components": "V,S,M",
+    "duration": "Instant",
+    "description": "You use any of the powers of allomancy",
+    "prism": [
+      "ARCANE PRISM"
+    ]
+  },
+  {
+    "name": "AAAAAAAAA",
+    "level": 4,
+    "school": "sadf",
+    "casting_time": "1 actio",
+    "range": "sadf",
+    "components": "asd",
+    "duration": "asd",
+    "description": "Paul",
+    "prism": [
+      "ARCANE PRISM"
+    ]
+  },
+  {
+    "name": "AAAA",
+    "level": 1,
+    "school": "dfasljk",
+    "casting_time": "sdajnf",
+    "range": "cnjfjs",
+    "components": "fdnjfasjn",
+    "duration": "qdsajnf",
+    "description": "dsfanjkdfsajkfdsa",
+    "prism": [
+      "ELEMENTAL PRISM"
+    ]
+  }
+]
