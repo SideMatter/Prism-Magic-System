@@ -25,6 +25,8 @@ export default function Home() {
   const [selectedSpell, setSelectedSpell] = useState<SpellWithPrism | null>(null);
   const [loading, setLoading] = useState(false);
   const [lastCacheTimestamp, setLastCacheTimestamp] = useState<string>("");
+  const [prisms, setPrisms] = useState<string[]>([]);
+  const [selectedPrisms, setSelectedPrisms] = useState<string[]>([]);
   
   // Strain Meter state (persisted in localStorage)
   const [strain, setStrain] = useState(() => {
@@ -70,9 +72,21 @@ export default function Home() {
     }
   };
 
+  // Load prisms from API
+  const loadPrisms = async () => {
+    try {
+      const response = await fetch("/api/prisms");
+      const data = await response.json();
+      setPrisms(data);
+    } catch (error) {
+      console.error("Error loading prisms:", error);
+    }
+  };
+
   useEffect(() => {
     // Initial load
     loadSpells();
+    loadPrisms();
     
     // Reload when page becomes visible (user navigates back from admin)
     const handleVisibilityChange = () => {
@@ -177,18 +191,42 @@ export default function Home() {
     }
   };
 
+  // Toggle prism selection
+  const togglePrism = (prism: string) => {
+    setSelectedPrisms((prev) =>
+      prev.includes(prism)
+        ? prev.filter((p) => p !== prism)
+        : [...prev, prism]
+    );
+  };
+
   useEffect(() => {
-    if (!searchQuery.trim()) {
-      setFilteredSpells(spells);
-      return;
+    let filtered = spells;
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((spell) =>
+        spell.name.toLowerCase().includes(query)
+      );
     }
 
-    const query = searchQuery.toLowerCase();
-    const filtered = spells.filter((spell) =>
-      spell.name.toLowerCase().includes(query)
-    );
+    // Filter by selected prisms
+    if (selectedPrisms.length > 0) {
+      filtered = filtered.filter((spell) => {
+        if (!spell.prism) return false;
+        
+        const spellPrisms = Array.isArray(spell.prism) 
+          ? spell.prism 
+          : [spell.prism];
+        
+        // Check if spell has at least one of the selected prisms
+        return spellPrisms.some((prism) => selectedPrisms.includes(prism));
+      });
+    }
+
     setFilteredSpells(filtered);
-  }, [searchQuery, spells]);
+  }, [searchQuery, spells, selectedPrisms]);
 
   const strainPercentage = maxStrain > 0 ? (strain / maxStrain) * 100 : 0;
 
@@ -311,7 +349,7 @@ export default function Home() {
           </p>
         </div>
 
-        <div className="max-w-2xl mx-auto mb-8">
+        <div className="max-w-2xl mx-auto mb-8 space-y-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
@@ -321,6 +359,42 @@ export default function Home() {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
+          </div>
+          
+          {/* Prism Filter */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Sparkles className="w-5 h-5 text-purple-500" />
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                Filter by Prism
+              </h3>
+              {selectedPrisms.length > 0 && (
+                <button
+                  onClick={() => setSelectedPrisms([])}
+                  className="ml-auto text-xs text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                >
+                  Clear all
+                </button>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {prisms.map((prism) => {
+                const isSelected = selectedPrisms.includes(prism);
+                return (
+                  <button
+                    key={prism}
+                    onClick={() => togglePrism(prism)}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                      isSelected
+                        ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-md"
+                        : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+                    }`}
+                  >
+                    {prism}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
@@ -426,50 +500,55 @@ export default function Home() {
                     </p>
                   </div>
                 ) : (
-                  <div className="grid gap-4">
-                    {filteredSpells.slice(0, 50).map((spell) => (
-                      <div
-                        key={spell.name}
-                        onClick={() => setSelectedSpell(spell)}
-                        className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 hover:shadow-lg transition-shadow cursor-pointer"
-                      >
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">
-                              {spell.name}
-                            </h3>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
-                              Level {spell.level} • {spell.school}
-                            </p>
-                          </div>
-                          <div className="flex flex-wrap gap-1 ml-4 justify-end">
-                            {spell.prism ? (
-                              Array.isArray(spell.prism) ? (
-                                spell.prism.map((prism) => (
-                                  <span key={prism} className="px-2 py-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full text-white text-xs font-semibold whitespace-nowrap">
-                                    {prism}
+                  <>
+                    <div className="grid gap-4">
+                      {filteredSpells.map((spell) => (
+                        <div
+                          key={spell.name}
+                          onClick={() => setSelectedSpell(spell)}
+                          className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 hover:shadow-lg transition-shadow cursor-pointer"
+                        >
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">
+                                {spell.name}
+                              </h3>
+                              <p className="text-sm text-gray-600 dark:text-gray-400">
+                                Level {spell.level} • {spell.school}
+                              </p>
+                            </div>
+                            <div className="flex flex-wrap gap-1 ml-4 justify-end">
+                              {spell.prism ? (
+                                Array.isArray(spell.prism) ? (
+                                  spell.prism.map((prism) => (
+                                    <span key={prism} className="px-2 py-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full text-white text-xs font-semibold whitespace-nowrap">
+                                      {prism}
+                                    </span>
+                                  ))
+                                ) : (
+                                  <span className="px-3 py-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full text-white text-sm font-semibold whitespace-nowrap">
+                                    {spell.prism}
                                   </span>
-                                ))
+                                )
                               ) : (
-                                <span className="px-3 py-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full text-white text-sm font-semibold whitespace-nowrap">
-                                  {spell.prism}
+                                <span className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded-full text-gray-700 dark:text-gray-300 text-xs font-semibold whitespace-nowrap">
+                                  No Prism
                                 </span>
-                              )
-                            ) : (
-                              <span className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded-full text-gray-700 dark:text-gray-300 text-xs font-semibold whitespace-nowrap">
-                                No Prism
-                              </span>
-                            )}
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                    {filteredSpells.length > 50 && (
-                      <p className="text-center text-gray-600 dark:text-gray-400 py-4">
-                        Showing first 50 results. Refine your search to see more.
+                      ))}
+                    </div>
+                    <div className="text-center py-4 mt-4">
+                      <p className="text-gray-600 dark:text-gray-400">
+                        Showing <span className="font-semibold text-gray-900 dark:text-white">{filteredSpells.length}</span> spell{filteredSpells.length !== 1 ? 's' : ''}
+                        {spells.length > 0 && filteredSpells.length !== spells.length && (
+                          <span> of {spells.length} total</span>
+                        )}
                       </p>
-                    )}
-                  </div>
+                    </div>
+                  </>
                 )}
               </div>
             )}
