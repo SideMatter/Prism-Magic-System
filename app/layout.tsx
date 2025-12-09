@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
+import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
   title: "Prism Magic System - D&D 5e Spell Finder",
@@ -52,6 +53,7 @@ export default function RootLayout({
           </div>
         </nav>
         {children}
+        <Toaster />
       </body>
     </html>
   );

@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 
 interface Spell {
@@ -25,6 +26,7 @@ interface SpellWithPrism extends Spell {
 }
 
 export default function AdminPage() {
+  const { toast } = useToast();
   const [spells, setSpells] = useState<SpellWithPrism[]>([]);
   const [filteredSpells, setFilteredSpells] = useState<SpellWithPrism[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -228,13 +230,27 @@ export default function AdminPage() {
       if (response.ok) {
         await loadData();
         setNewPrism("");
+        toast({
+          title: "Prism Added!",
+          description: `${prismName} has been saved to Redis.`,
+        });
         showStatus("success", `Prism "${prismName}" added successfully!`);
       } else {
         const error = await response.json().catch(() => ({ error: "Unknown error" }));
+        toast({
+          title: "Error",
+          description: `Failed to add prism: ${error.error || "It may already exist."}`,
+          variant: "destructive",
+        });
         showStatus("error", `Failed to add prism: ${error.error || "It may already exist."}`);
       }
     } catch (error) {
       console.error("Error adding prism:", error);
+      toast({
+        title: "Error",
+        description: "Error adding prism. Please try again.",
+        variant: "destructive",
+      });
       showStatus("error", "Error adding prism. Please try again.");
     }
   };

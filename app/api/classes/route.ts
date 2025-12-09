@@ -7,7 +7,7 @@ import { CharacterClass } from "@/lib/npc-generator";
 export const dynamic = 'force-dynamic';
 
 const DATA_DIR = path.join(process.cwd(), "data");
-const CLASSES_FILE = path.join(DATA_DIR, "classes.json");
+const CLASSES_FILE = path.join(DATA_DIR, "prism-classes.json");
 
 interface ClassesData {
   classes: CharacterClass[];
@@ -16,20 +16,23 @@ interface ClassesData {
 
 // Load classes from storage or file
 async function loadClasses(): Promise<ClassesData> {
+  // Always load from file first (prism-classes.json is the source of truth)
+  if (fs.existsSync(CLASSES_FILE)) {
+    const data = fs.readFileSync(CLASSES_FILE, "utf-8");
+    const parsed = JSON.parse(data);
+    console.log(`Loaded ${parsed.classes?.length || 0} base classes from file`);
+    return parsed;
+  }
+
+  // Try storage as fallback
   try {
-    // Try to load from storage (Redis/KV) first
     const storedClasses = await storage.get<ClassesData>('classes');
     if (storedClasses) {
+      console.log('Loaded classes from storage');
       return storedClasses;
     }
   } catch (error) {
-    console.log('Storage not available, falling back to file');
-  }
-
-  // Fall back to file
-  if (fs.existsSync(CLASSES_FILE)) {
-    const data = fs.readFileSync(CLASSES_FILE, "utf-8");
-    return JSON.parse(data);
+    console.log('Storage not available');
   }
 
   // Return default empty structure

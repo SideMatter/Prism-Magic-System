@@ -9,6 +9,10 @@ export interface CharacterClass {
   statPriority: string[];
   description: string;
   isCustom?: boolean;
+  prism?: string;
+  type?: string;
+  spellList?: string;
+  features?: string[];
 }
 
 export interface NPC {
@@ -25,7 +29,11 @@ export interface NPC {
     charisma: number;
   };
   hp: number;
+  maxHP: number;
+  currentHP: number;
   ac: number;
+  dc: number;
+  maxStrain: number;
   createdAt: string;
 }
 
@@ -108,6 +116,17 @@ export function calculateBaseAC(dexterityMod: number): number {
   return 10 + dexterityMod;
 }
 
+// Calculate max Strain (Prism of Magic system)
+export function calculateMaxStrain(constitutionMod: number, level: number): number {
+  return constitutionMod + level;
+}
+
+// Calculate spell DC (8 + proficiency bonus + primary ability modifier)
+export function calculateDC(level: number, primaryAbilityMod: number): number {
+  const proficiencyBonus = Math.ceil(level / 4) + 1; // 2 at lvl 1-4, 3 at 5-8, etc.
+  return 8 + proficiencyBonus + primaryAbilityMod;
+}
+
 // Generate a complete NPC
 export function generateNPC(
   name: string,
@@ -133,6 +152,12 @@ export function generateNPC(
   const stats = assignStatsByPriority(baseStats, characterClass.statPriority);
   const constitutionMod = getModifier(stats.constitution);
   const dexterityMod = getModifier(stats.dexterity);
+  
+  // Get primary ability modifier for DC calculation
+  const primaryAbility = characterClass.primaryAbilities[0] || 'intelligence';
+  const primaryAbilityMod = getModifier(stats[primaryAbility as StatName]);
+  
+  const maxHP = calculateHP(characterClass.hitDie, constitutionMod, level);
 
   return {
     id: `npc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -140,8 +165,12 @@ export function generateNPC(
     class: characterClass,
     level,
     stats,
-    hp: calculateHP(characterClass.hitDie, constitutionMod, level),
+    hp: maxHP, // Keep for backwards compatibility
+    maxHP: maxHP,
+    currentHP: maxHP, // Start at full health
     ac: calculateBaseAC(dexterityMod),
+    dc: calculateDC(level, primaryAbilityMod),
+    maxStrain: calculateMaxStrain(constitutionMod, level),
     createdAt: new Date().toISOString(),
   };
 }
