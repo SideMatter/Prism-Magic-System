@@ -33,7 +33,13 @@ export default function RootLayout({
                   href="/"
                   className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium"
                 >
-                  Search
+                  Spells
+                </Link>
+                <Link
+                  href="/npc"
+                  className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium"
+                >
+                  NPC Generator
                 </Link>
                 <Link
                   href="/admin"

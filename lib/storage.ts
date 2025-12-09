@@ -397,6 +397,58 @@ export async function getCustomSpellsTimestamp(): Promise<number> {
 
 // Unified storage interface (auto-selects based on environment)
 export const storage = {
+  // Generic get/set for any key
+  async get<T>(key: string): Promise<T | null> {
+    if (USE_REDIS_DIRECT) {
+      const redis = await getRedisClient();
+      if (!redis) return null;
+      try {
+        const data = await redis.get(key);
+        if (!data) return null;
+        return JSON.parse(data);
+      } catch (error) {
+        console.error(`Error loading ${key} from Redis:`, error);
+        return null;
+      }
+    } else if (USE_REDIS_REST) {
+      const kv = await getKVClient();
+      if (!kv) return null;
+      try {
+        const data = await kv.get(key) as T | null;
+        return data;
+      } catch (error) {
+        console.error(`Error loading ${key} from KV:`, error);
+        return null;
+      }
+    }
+    return null;
+  },
+
+  async set<T>(key: string, value: T): Promise<boolean> {
+    if (USE_REDIS_DIRECT) {
+      const redis = await getRedisClient();
+      if (!redis) return false;
+      try {
+        await redis.set(key, JSON.stringify(value));
+        return true;
+      } catch (error) {
+        console.error(`Error saving ${key} to Redis:`, error);
+        return false;
+      }
+    } else if (USE_REDIS_REST) {
+      const kv = await getKVClient();
+      if (!kv) return false;
+      try {
+        await kv.set(key, value);
+        return true;
+      } catch (error) {
+        console.error(`Error saving ${key} to KV:`, error);
+        return false;
+      }
+    }
+    return false;
+  },
+
   async loadMappings(): Promise<SpellPrismMappings> {
     if (USE_REDIS_DIRECT) {
       return redisStorage.loadMappings();
