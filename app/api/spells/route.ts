@@ -263,9 +263,11 @@ export async function GET(request: Request) {
     // 3. Cache is older than 1 hour
     // 4. No cache exists yet
     // 5. Force refresh requested
+    // 6. In-memory cache looks incomplete (< 300 spells)
     const timestampChanged = combinedTimestamp !== lastMappingsTimestamp && lastMappingsTimestamp !== 0;
     const cacheExpired = spellsCache && (now - cacheTimestamp) >= CACHE_DURATION;
-    const shouldInvalidate = !spellsCache || timestampChanged || cacheExpired || forceRefresh;
+    const inMemoryIncomplete = spellsCache && spellsCache.length > 0 && spellsCache.length < 300;
+    const shouldInvalidate = !spellsCache || timestampChanged || cacheExpired || forceRefresh || inMemoryIncomplete;
     
     if (spellsCache && !shouldInvalidate) {
       spells = spellsCache;
@@ -279,13 +281,20 @@ export async function GET(request: Request) {
       const cachedTimestamp = await storage.getCachedSpellsTimestamp();
       const cacheAge = cachedTimestamp ? (now - cachedTimestamp) / 1000 / 60 : 999999; // in minutes
       
-      if (cachedSpells && cachedSpells.length > 0 && cacheAge < 1440 && !forceRefresh) {
-        // Use cached spells if less than 24 hours old and not force refresh
+      // Invalidate cache if it has fewer than 300 spells (likely incomplete)
+      const cacheIncomplete = cachedSpells && cachedSpells.length > 0 && cachedSpells.length < 300;
+      
+      if (cachedSpells && cachedSpells.length > 0 && cacheAge < 1440 && !forceRefresh && !cacheIncomplete) {
+        // Use cached spells if less than 24 hours old, not force refresh, and has enough spells
         console.log(`✓ Using Redis/KV cache: ${cachedSpells.length} spells (age: ${Math.round(cacheAge)} minutes)`);
         spells = cachedSpells;
       } else {
         // Load from D&D API (might timeout on Vercel)
-        console.log(`⟳ Fetching fresh spells from D&D 5e API...`);
+        if (cacheIncomplete) {
+          console.log(`⟳ Cache incomplete (${cachedSpells?.length || 0} spells), fetching fresh spells from D&D 5e API...`);
+        } else {
+          console.log(`⟳ Fetching fresh spells from D&D 5e API...`);
+        }
         spells = await loadSpells();
         
         // Save to Redis/KV cache for future requests
