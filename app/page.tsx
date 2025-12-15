@@ -1,11 +1,20 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, Sparkles, Plus, Minus, ArrowLeft, Hash } from "lucide-react";
+import { Search, Sparkles, Plus, Minus, ArrowLeft, Hash, Check } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+} from "@/components/ui/command";
 
 interface Spell {
   name: string;
@@ -34,6 +43,7 @@ export default function Home() {
   const [selectedPrisms, setSelectedPrisms] = useState<string[]>([]);
   const [includeNoPrism, setIncludeNoPrism] = useState(false);
   const [selectedLevels, setSelectedLevels] = useState<number[]>([]);
+  const [commandOpen, setCommandOpen] = useState(false);
   
   // Strain Meter state (persisted in localStorage)
   const [strain, setStrain] = useState(0);
@@ -47,6 +57,19 @@ export default function Home() {
       if (savedStrain) setStrain(parseInt(savedStrain, 10));
       if (savedMaxStrain) setMaxStrain(parseInt(savedMaxStrain, 10));
     }
+  }, []);
+
+  // Command palette keyboard shortcut
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setCommandOpen((open) => !open);
+      }
+    };
+
+    document.addEventListener("keydown", down);
+    return () => document.removeEventListener("keydown", down);
   }, []);
 
   // Load spells from API
@@ -346,17 +369,19 @@ export default function Home() {
 
         {/* Search and Filters */}
         <div className="max-w-2xl mx-auto mb-8 space-y-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
-            <Input
-              type="text"
-              placeholder="Search for a spell (e.g., Fireball, Magic Missile)..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          
+          {/* Command palette trigger */}
+          <Button
+            variant="outline"
+            className="w-full justify-start text-muted-foreground"
+            onClick={() => setCommandOpen(true)}
+          >
+            <Search className="w-4 h-4 mr-2" />
+            <span>Search spells...</span>
+            <kbd className="pointer-events-none ml-auto inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
+              <span className="text-xs">⌘</span>K
+            </kbd>
+          </Button>
+
           {/* Prism Filter */}
           <Card>
             <CardHeader className="pb-3">
@@ -619,6 +644,116 @@ export default function Home() {
           </>
         )}
       </div>
+
+      {/* Command Dialog */}
+      <CommandDialog open={commandOpen} onOpenChange={setCommandOpen}>
+        <CommandInput
+          placeholder="Search for a spell or filter..."
+          value={searchQuery}
+          onValueChange={setSearchQuery}
+        />
+        <CommandList>
+          <CommandEmpty>No results found.</CommandEmpty>
+
+          <CommandGroup heading="Filter by Prism">
+            <CommandItem
+              onSelect={() => {
+                setIncludeNoPrism((prev) => !prev);
+              }}
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
+              <span>No Prism</span>
+              {includeNoPrism && (
+                <Check className="w-4 h-4 ml-auto text-primary" />
+              )}
+            </CommandItem>
+            {prisms.map((prism) => {
+              const isSelected = selectedPrisms.includes(prism);
+              return (
+                <CommandItem
+                  key={prism}
+                  onSelect={() => togglePrism(prism)}
+                >
+                  <span>{prism}</span>
+                  {isSelected && (
+                    <Check className="w-4 h-4 ml-auto text-primary" />
+                  )}
+                </CommandItem>
+              );
+            })}
+          </CommandGroup>
+
+          <CommandSeparator />
+
+          <CommandGroup heading="Filter by Level">
+            {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((level) => {
+              const isSelected = selectedLevels.includes(level);
+              return (
+                <CommandItem
+                  key={level}
+                  onSelect={() => toggleLevel(level)}
+                >
+                  <span>{level === 0 ? "Cantrips (0)" : `Level ${level}`}</span>
+                  {isSelected && (
+                    <Check className="w-4 h-4 ml-auto text-primary" />
+                  )}
+                </CommandItem>
+              );
+            })}
+          </CommandGroup>
+
+          <CommandSeparator />
+
+          <CommandGroup heading="Spells">
+            {filteredSpells.slice(0, 50).map((spell) => (
+              <CommandItem
+                key={spell.name}
+                value={spell.name}
+                onSelect={() => {
+                  setSelectedSpell(spell);
+                  setCommandOpen(false);
+                }}
+              >
+                <div className="flex flex-col gap-0.5 flex-1">
+                  <span className="font-medium">{spell.name}</span>
+                  <span className="text-xs text-muted-foreground">
+                    Level {spell.level} • {spell.school}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {spell.prism ? (
+                    Array.isArray(spell.prism) ? (
+                      spell.prism.map((prism) => (
+                        <Badge
+                          key={prism}
+                          variant="outline"
+                          className="text-[10px] px-1 py-0"
+                        >
+                          {prism}
+                        </Badge>
+                      ))
+                    ) : (
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] px-1 py-0"
+                      >
+                        {spell.prism}
+                      </Badge>
+                    )
+                  ) : (
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] px-1 py-0"
+                    >
+                      No Prism
+                    </Badge>
+                  )}
+                </div>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        </CommandList>
+      </CommandDialog>
     </div>
   );
 }
