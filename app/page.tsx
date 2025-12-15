@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, Sparkles, Plus, Minus, ArrowLeft } from "lucide-react";
+import { Search, Sparkles, Plus, Minus, ArrowLeft, Hash } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,8 @@ export default function Home() {
   const [lastCacheTimestamp, setLastCacheTimestamp] = useState<string>("");
   const [prisms, setPrisms] = useState<string[]>([]);
   const [selectedPrisms, setSelectedPrisms] = useState<string[]>([]);
+  const [includeNoPrism, setIncludeNoPrism] = useState(false);
+  const [selectedLevels, setSelectedLevels] = useState<number[]>([]);
   
   // Strain Meter state (persisted in localStorage)
   const [strain, setStrain] = useState(0);
@@ -196,6 +198,14 @@ export default function Home() {
     );
   };
 
+  const toggleLevel = (level: number) => {
+    setSelectedLevels((prev) =>
+      prev.includes(level)
+        ? prev.filter((l) => l !== level)
+        : [...prev, level]
+    );
+  };
+
   useEffect(() => {
     let filtered = spells;
 
@@ -206,20 +216,38 @@ export default function Home() {
       );
     }
 
-    if (selectedPrisms.length > 0) {
+    if (selectedPrisms.length > 0 || includeNoPrism) {
       filtered = filtered.filter((spell) => {
-        if (!spell.prism) return false;
-        
-        const spellPrisms = Array.isArray(spell.prism) 
-          ? spell.prism 
-          : [spell.prism];
-        
-        return spellPrisms.some((prism) => selectedPrisms.includes(prism));
+        const hasPrism = !!spell.prism;
+
+        // Match "no prism" filter
+        if (!hasPrism) {
+          return includeNoPrism;
+        }
+
+        // Match selected prism chips
+        const spellPrisms = (Array.isArray(spell.prism)
+          ? spell.prism
+          : [spell.prism]
+        ).filter((p): p is string => typeof p === "string" && p.length > 0);
+
+        const matchesPrism = spellPrisms.some((prism) =>
+          selectedPrisms.includes(prism)
+        );
+
+        // If spell has prisms, only include it if it matches selected prisms
+        return matchesPrism;
       });
     }
 
+    if (selectedLevels.length > 0) {
+      filtered = filtered.filter((spell) =>
+        selectedLevels.includes(spell.level)
+      );
+    }
+
     setFilteredSpells(filtered);
-  }, [searchQuery, spells, selectedPrisms]);
+  }, [searchQuery, spells, selectedPrisms, includeNoPrism, selectedLevels]);
 
   const strainPercentage = maxStrain > 0 ? (strain / maxStrain) * 100 : 0;
 
@@ -337,11 +365,14 @@ export default function Home() {
                   <Sparkles className="w-5 h-5" />
                   <h3 className="text-sm font-semibold">Filter by Prism</h3>
                 </div>
-                {selectedPrisms.length > 0 && (
+                {(selectedPrisms.length > 0 || includeNoPrism) && (
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setSelectedPrisms([])}
+                    onClick={() => {
+                      setSelectedPrisms([]);
+                      setIncludeNoPrism(false);
+                    }}
                     className="h-auto py-1 px-2 text-xs"
                   >
                     Clear all
@@ -351,6 +382,14 @@ export default function Home() {
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
+                <Button
+                  onClick={() => setIncludeNoPrism((prev) => !prev)}
+                  variant={includeNoPrism ? "default" : "outline"}
+                  size="sm"
+                  className="rounded-full"
+                >
+                  No Prism
+                </Button>
                 {prisms.map((prism) => {
                   const isSelected = selectedPrisms.includes(prism);
                   return (
@@ -366,6 +405,49 @@ export default function Home() {
                   );
                 })}
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Spell Level Filter */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Hash className="w-5 h-5" />
+                  <h3 className="text-sm font-semibold">Filter by Spell Level</h3>
+                </div>
+                {selectedLevels.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedLevels([])}
+                    className="h-auto py-1 px-2 text-xs"
+                  >
+                    Clear all
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((level) => {
+                  const isSelected = selectedLevels.includes(level);
+                  return (
+                    <Button
+                      key={level}
+                      onClick={() => toggleLevel(level)}
+                      variant={isSelected ? "default" : "outline"}
+                      size="sm"
+                      className="rounded-full w-10 h-10 p-0"
+                    >
+                      {level === 0 ? "C" : level}
+                    </Button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                C = Cantrips (Level 0)
+              </p>
             </CardContent>
           </Card>
         </div>
