@@ -141,6 +141,8 @@ export async function PUT(request: Request) {
   try {
     const body = await request.json();
     const { id, name, maxSpellLevel, prisms } = body;
+    
+    console.log("PUT /api/players - Received update request:", { id, name, maxSpellLevel, prisms });
 
     if (!id || typeof id !== "string") {
       return NextResponse.json({ error: "Player ID is required" }, { status: 400 });
@@ -152,6 +154,8 @@ export async function PUT(request: Request) {
     if (playerIndex === -1) {
       return NextResponse.json({ error: "Player not found" }, { status: 404 });
     }
+    
+    console.log("Found player at index:", playerIndex, "Current value:", players[playerIndex]);
 
     // Validate updates
     if (name !== undefined) {
@@ -179,7 +183,9 @@ export async function PUT(request: Request) {
       players[playerIndex].prisms = prisms.filter((p: any) => typeof p === "string" && p.trim().length > 0);
     }
 
+    console.log("Updated player:", players[playerIndex]);
     await savePlayers(players);
+    console.log("Saved players to storage");
 
     return NextResponse.json(players[playerIndex]);
   } catch (error) {

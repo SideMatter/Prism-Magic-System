@@ -443,6 +443,7 @@ export default function AdminPage() {
   };
 
   const handleUpdatePlayer = async (player: Player) => {
+    console.log("Updating player:", player);
     setLoading(true);
     try {
       const response = await fetch("/api/players", {
@@ -677,7 +678,7 @@ export default function AdminPage() {
                             <label className="text-xs font-medium">Name</label>
                             <Input
                               value={editingPlayer.name}
-                              onChange={(e) => setEditingPlayer({ ...editingPlayer, name: e.target.value })}
+                              onChange={(e) => setEditingPlayer(prev => ({ ...prev!, name: e.target.value }))}
                               className="h-8"
                             />
                           </div>
@@ -688,7 +689,7 @@ export default function AdminPage() {
                                 variant="outline"
                                 size="sm"
                                 className="h-8 w-8 p-0"
-                                onClick={() => setEditingPlayer({ ...editingPlayer, maxSpellLevel: Math.max(0, editingPlayer.maxSpellLevel - 1) })}
+                                onClick={() => setEditingPlayer(prev => ({ ...prev!, maxSpellLevel: Math.max(0, prev!.maxSpellLevel - 1) }))}
                               >
                                 -
                               </Button>
@@ -697,14 +698,19 @@ export default function AdminPage() {
                                 min="0"
                                 max="9"
                                 value={editingPlayer.maxSpellLevel}
-                                onChange={(e) => setEditingPlayer({ ...editingPlayer, maxSpellLevel: Math.max(0, Math.min(9, parseInt(e.target.value) || 0)) })}
+                                onChange={(e) => {
+                                  const value = parseInt(e.target.value);
+                                  if (!isNaN(value)) {
+                                    setEditingPlayer(prev => ({ ...prev!, maxSpellLevel: Math.max(0, Math.min(9, value)) }));
+                                  }
+                                }}
                                 className="h-8 text-center"
                               />
                               <Button
                                 variant="outline"
                                 size="sm"
                                 className="h-8 w-8 p-0"
-                                onClick={() => setEditingPlayer({ ...editingPlayer, maxSpellLevel: Math.min(9, editingPlayer.maxSpellLevel + 1) })}
+                                onClick={() => setEditingPlayer(prev => ({ ...prev!, maxSpellLevel: Math.min(9, prev!.maxSpellLevel + 1) }))}
                               >
                                 +
                               </Button>
@@ -724,12 +730,12 @@ export default function AdminPage() {
                                   size="sm"
                                   className="h-7 text-xs"
                                   onClick={() => {
-                                    setEditingPlayer({
-                                      ...editingPlayer,
+                                    setEditingPlayer(prev => ({
+                                      ...prev!,
                                       prisms: isSelected
-                                        ? editingPlayer.prisms.filter(p => p !== prism)
-                                        : [...editingPlayer.prisms, prism]
-                                    });
+                                        ? prev!.prisms.filter(p => p !== prism)
+                                        : [...prev!.prisms, prism]
+                                    }));
                                   }}
                                 >
                                   {prism}

@@ -354,20 +354,33 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Strain Meter */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
+      {/* Header */}
+      <div className="sticky top-0 z-10 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold">Prism Magic System</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">Search for D&D 5e spells and discover their prism</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Left Sidebar - Filters */}
+          <aside className="w-full lg:w-80 lg:sticky lg:top-[5.5rem] lg:self-start lg:h-[calc(100vh-7rem)] lg:overflow-y-auto space-y-4">
+            {/* Strain Meter */}
+            <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center justify-between">
               <span>Strain Meter</span>
               <span className="text-sm font-normal text-muted-foreground">
                 {strain} / {maxStrain}
               </span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3">
             {/* Strain Bar */}
-            <div className="w-full h-8 bg-secondary rounded-full overflow-hidden relative border">
+            <div className="w-full h-6 bg-secondary rounded-full overflow-hidden relative border">
               <div
                 className="h-full bg-destructive transition-all duration-300 ease-out flex items-center justify-end pr-2"
                 style={{ width: `${strainPercentage}%` }}
@@ -386,79 +399,55 @@ export default function Home() {
             </div>
 
             {/* Controls */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Current Strain</label>
-                <div className="flex items-center gap-2">
-                  <Button onClick={() => decreaseStrain(1)} variant="outline" size="sm">
-                    <Minus className="w-4 h-4" />
-                  </Button>
-                  <Button onClick={() => decreaseStrain(5)} variant="outline" size="sm">
-                    -5
-                  </Button>
-                  <Input
-                    type="number"
-                    min="0"
-                    max={maxStrain}
-                    value={strain}
-                    onChange={(e) => setStrainValue(parseInt(e.target.value) || 0)}
-                    className="flex-1 text-center"
-                  />
-                  <Button onClick={() => increaseStrain(1)} variant="destructive" size="sm">
-                    <Plus className="w-4 h-4" />
-                  </Button>
-                  <Button onClick={() => increaseStrain(5)} variant="destructive" size="sm">
-                    +5
-                  </Button>
-                </div>
+            <div className="space-y-2">
+              <div className="flex items-center gap-1">
+                <Button onClick={() => decreaseStrain(5)} variant="outline" size="sm" className="flex-1">
+                  -5
+                </Button>
+                <Button onClick={() => decreaseStrain(1)} variant="outline" size="sm" className="flex-1">
+                  -1
+                </Button>
+                <Input
+                  type="number"
+                  min="0"
+                  max={maxStrain}
+                  value={strain}
+                  onChange={(e) => setStrainValue(parseInt(e.target.value) || 0)}
+                  className="w-16 text-center h-9"
+                />
+                <Button onClick={() => increaseStrain(1)} variant="destructive" size="sm" className="flex-1">
+                  +1
+                </Button>
+                <Button onClick={() => increaseStrain(5)} variant="destructive" size="sm" className="flex-1">
+                  +5
+                </Button>
               </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Max Strain Capacity</label>
-                <div className="flex items-center gap-2">
-                  <Button onClick={() => setMaxStrainValue(maxStrain - 10)} variant="outline" size="sm">
-                    -10
-                  </Button>
-                  <Input
-                    type="number"
-                    min="1"
-                    value={maxStrain}
-                    onChange={(e) => setMaxStrainValue(parseInt(e.target.value) || 1)}
-                    className="flex-1 text-center"
-                  />
-                  <Button onClick={() => setMaxStrainValue(maxStrain + 10)} variant="outline" size="sm">
-                    +10
-                  </Button>
-                </div>
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-muted-foreground whitespace-nowrap">Max:</label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={maxStrain}
+                  onChange={(e) => setMaxStrainValue(parseInt(e.target.value) || 1)}
+                  className="flex-1 text-center h-8 text-sm"
+                />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold mb-2">
-            Prism Magic System
-          </h1>
-          <p className="text-lg text-muted-foreground">
-            Search for D&D 5e spells and discover their prism
-          </p>
-        </div>
-
-        {/* Search and Filters */}
-        <div className="max-w-2xl mx-auto mb-8 space-y-4">
-          {/* Command palette trigger */}
-          <Button
-            variant="outline"
-            className="w-full justify-start text-muted-foreground"
-            onClick={() => setCommandOpen(true)}
-          >
-            <Search className="w-4 h-4 mr-2" />
-            <span>Search spells...</span>
-            <kbd className="pointer-events-none ml-auto inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
-              <span className="text-xs">⌘</span>K
-            </kbd>
-          </Button>
+        {/* Command palette trigger */}
+        <Button
+          variant="outline"
+          className="w-full justify-start text-muted-foreground"
+          onClick={() => setCommandOpen(true)}
+        >
+          <Search className="w-4 h-4 mr-2" />
+          <span>Search spells...</span>
+          <kbd className="pointer-events-none ml-auto inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
+            <span className="text-xs">⌘</span>K
+          </kbd>
+        </Button>
 
           {/* Player Quick Filter */}
           {players.length > 0 && (
@@ -466,8 +455,8 @@ export default function Home() {
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <User className="w-5 h-5" />
-                    <h3 className="text-sm font-semibold">Quick Filter by Player</h3>
+                    <User className="w-4 h-4" />
+                    <h3 className="text-sm font-semibold">Player Filter</h3>
                   </div>
                   {selectedPlayer && (
                     <Button
@@ -483,7 +472,7 @@ export default function Home() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-col gap-1.5">
                   {players.map((player) => {
                     const isSelected = selectedPlayer?.id === player.id;
                     return (
@@ -492,11 +481,11 @@ export default function Home() {
                         onClick={() => isSelected ? clearPlayerFilter() : applyPlayerFilter(player)}
                         variant={isSelected ? "default" : "outline"}
                         size="sm"
-                        className="rounded-full"
+                        className="justify-start h-8"
                       >
-                        <User className="w-3 h-3 mr-1" />
-                        {player.name}
-                        <Badge variant={isSelected ? "secondary" : "outline"} className="ml-2 text-[10px] px-1">
+                        <User className="w-3 h-3 mr-2" />
+                        <span className="flex-1 text-left text-xs">{player.name}</span>
+                        <Badge variant={isSelected ? "secondary" : "outline"} className="text-[10px] px-1.5">
                           Max {player.maxSpellLevel}
                         </Badge>
                       </Button>
@@ -529,8 +518,8 @@ export default function Home() {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="w-5 h-5" />
-                  <h3 className="text-sm font-semibold">Filter by Prism</h3>
+                  <Sparkles className="w-4 h-4" />
+                  <h3 className="text-sm font-semibold">Prisms</h3>
                 </div>
                 {(selectedPrisms.length > 0 || includeNoPrism) && (
                   <Button
@@ -548,12 +537,12 @@ export default function Home() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1.5">
                 <Button
                   onClick={() => setIncludeNoPrism((prev) => !prev)}
                   variant={includeNoPrism ? "default" : "outline"}
                   size="sm"
-                  className="rounded-full"
+                  className="rounded-full text-xs h-7"
                 >
                   No Prism
                 </Button>
@@ -565,7 +554,7 @@ export default function Home() {
                       onClick={() => togglePrism(prism)}
                       variant={isSelected ? "default" : "outline"}
                       size="sm"
-                      className="rounded-full"
+                      className="rounded-full text-xs h-7"
                     >
                       {prism}
                     </Button>
@@ -580,8 +569,8 @@ export default function Home() {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Hash className="w-5 h-5" />
-                  <h3 className="text-sm font-semibold">Filter by Spell Level</h3>
+                  <Hash className="w-4 h-4" />
+                  <h3 className="text-sm font-semibold">Spell Levels</h3>
                 </div>
                 {selectedLevels.length > 0 && (
                   <Button
@@ -596,7 +585,7 @@ export default function Home() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1.5">
                 {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((level) => {
                   const isSelected = selectedLevels.includes(level);
                   return (
@@ -605,7 +594,7 @@ export default function Home() {
                       onClick={() => toggleLevel(level)}
                       variant={isSelected ? "default" : "outline"}
                       size="sm"
-                      className="rounded-full w-10 h-10 p-0"
+                      className="rounded-full w-9 h-9 p-0 text-xs"
                     >
                       {level === 0 ? "C" : level}
                     </Button>
@@ -613,14 +602,15 @@ export default function Home() {
                 })}
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                C = Cantrips (Level 0)
+                C = Cantrips
               </p>
             </CardContent>
           </Card>
-        </div>
+        </aside>
 
-        {/* Content */}
-        {loading ? (
+        {/* Main Content Area - Spells */}
+        <main className="flex-1 min-w-0">
+          {loading ? (
           <div className="text-center py-12">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             <p className="mt-4 text-muted-foreground">Loading spells...</p>
@@ -628,7 +618,7 @@ export default function Home() {
         ) : (
           <>
             {selectedSpell ? (
-              <div className="max-w-3xl mx-auto">
+              <div className="w-full">
                 <Card>
                   <CardHeader>
                     <Button
@@ -716,7 +706,7 @@ export default function Home() {
                 </Card>
               </div>
             ) : (
-              <div className="max-w-4xl mx-auto">
+              <div className="w-full">
                 {filteredSpells.length === 0 ? (
                   <div className="text-center py-12">
                     <p className="text-muted-foreground">
@@ -787,6 +777,8 @@ export default function Home() {
             )}
           </>
         )}
+        </main>
+        </div>
       </div>
 
       {/* Command Dialog */}
