@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Save, Search, X, Plus, Trash2, Edit2, Home } from "lucide-react";
+import { Save, Search, X, Plus, Trash2, Edit2, Home, User, ArrowUp, ArrowDown } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,8 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import type { Player } from "@/lib/player-utils";
+import { getAvailableSpellLevels } from "@/lib/player-utils";
 
 interface Spell {
   name: string;
@@ -61,6 +63,16 @@ export default function AdminPage() {
   const [editingCustomSpell, setEditingCustomSpell] = useState<SpellWithPrism | null>(null);
   const [statusMessage, setStatusMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const statusTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+  // Player management state
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
+  const [showPlayerForm, setShowPlayerForm] = useState(false);
+  const [playerForm, setPlayerForm] = useState({
+    name: "",
+    maxSpellLevel: 0,
+    prisms: [] as string[],
+  });
 
   const showStatus = (type: "success" | "error", text: string) => {
     if (statusTimeoutRef.current) {
@@ -88,7 +100,7 @@ export default function AdminPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [spellsRes, prismsRes] = await Promise.all([
+      const [spellsRes, prismsRes, playersRes] = await Promise.all([
         fetch("/api/spells", {
           cache: 'no-store',
           headers: {
@@ -101,12 +113,20 @@ export default function AdminPage() {
             'Cache-Control': 'no-cache',
           }
         }),
+        fetch("/api/players", {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache',
+          }
+        }),
       ]);
       const spellsData = await spellsRes.json();
       const prismsData = await prismsRes.json();
+      const playersData = await playersRes.json();
       setSpells(spellsData);
       setFilteredSpells(spellsData);
       setAvailablePrisms(prismsData);
+      setPlayers(playersData);
     } catch (error) {
       console.error("Error loading data:", error);
     } finally {
@@ -388,6 +408,97 @@ export default function AdminPage() {
     }
   };
 
+  // Player management handlers
+  const handleCreatePlayer = async () => {
+    if (!playerForm.name.trim()) {
+      showStatus("error", "Please enter a player name.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch("/api/players", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(playerForm),
+      });
+
+      if (response.ok) {
+        await loadData();
+        setPlayerForm({ name: "", maxSpellLevel: 0, prisms: [] });
+        setShowPlayerForm(false);
+        showStatus("success", `Player "${playerForm.name}" created successfully!`);
+      } else {
+        const error = await response.json().catch(() => ({ error: "Unknown error" }));
+        showStatus("error", `Failed to create player: ${error.error || "Unknown error"}`);
+      }
+    } catch (error) {
+      console.error("Error creating player:", error);
+      showStatus("error", "Error creating player. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdatePlayer = async (player: Player) => {
+    setLoading(true);
+    try {
+      const response = await fetch("/api/players", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(player),
+      });
+
+      if (response.ok) {
+        await loadData();
+        setEditingPlayer(null);
+        showStatus("success", `Player "${player.name}" updated successfully!`);
+      } else {
+        const error = await response.json().catch(() => ({ error: "Unknown error" }));
+        showStatus("error", `Failed to update player: ${error.error || "Unknown error"}`);
+      }
+    } catch (error) {
+      console.error("Error updating player:", error);
+      showStatus("error", "Error updating player. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeletePlayer = async (id: string, name: string) => {
+    if (!confirm(`Delete player "${name}"? This cannot be undone.`)) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch("/api/players", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ id }),
+      });
+
+      if (response.ok) {
+        await loadData();
+        showStatus("success", `Player "${name}" deleted successfully!`);
+      } else {
+        const error = await response.json().catch(() => ({ error: "Unknown error" }));
+        showStatus("error", `Failed to delete player: ${error.error || "Unknown error"}`);
+      }
+    } catch (error) {
+      console.error("Error deleting player:", error);
+      showStatus("error", "Error deleting player. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -453,6 +564,243 @@ export default function AdminPage() {
               ))}
             </div>
           </CardContent>
+        </Card>
+
+        {/* Player Management */}
+        <Card className="mb-8">
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="w-5 h-5" />
+                  Player Management
+                </CardTitle>
+                <CardDescription>Manage players and their accessible prisms & spell levels</CardDescription>
+              </div>
+              <Button
+                onClick={() => setShowPlayerForm(!showPlayerForm)}
+                variant={showPlayerForm ? "secondary" : "default"}
+              >
+                {showPlayerForm ? <X className="w-4 h-4 mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
+                {showPlayerForm ? "Cancel" : "New Player"}
+              </Button>
+            </div>
+          </CardHeader>
+          {showPlayerForm && (
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Player Name *</label>
+                  <Input
+                    value={playerForm.name}
+                    onChange={(e) => setPlayerForm({ ...playerForm, name: e.target.value })}
+                    placeholder="e.g., Gandalf"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Max Spell Level *</label>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPlayerForm({ ...playerForm, maxSpellLevel: Math.max(0, playerForm.maxSpellLevel - 1) })}
+                    >
+                      -
+                    </Button>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="9"
+                      value={playerForm.maxSpellLevel}
+                      onChange={(e) => setPlayerForm({ ...playerForm, maxSpellLevel: Math.max(0, Math.min(9, parseInt(e.target.value) || 0)) })}
+                      className="text-center"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPlayerForm({ ...playerForm, maxSpellLevel: Math.min(9, playerForm.maxSpellLevel + 1) })}
+                    >
+                      +
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Can cast: {getAvailableSpellLevels(playerForm.maxSpellLevel).join(', ')}
+                  </p>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="text-sm font-medium">Accessible Prisms</label>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {availablePrisms.map((prism) => {
+                      const isSelected = playerForm.prisms.includes(prism);
+                      return (
+                        <Button
+                          key={prism}
+                          type="button"
+                          variant={isSelected ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => {
+                            setPlayerForm({
+                              ...playerForm,
+                              prisms: isSelected
+                                ? playerForm.prisms.filter(p => p !== prism)
+                                : [...playerForm.prisms, prism]
+                            });
+                          }}
+                        >
+                          {prism}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+              <Button
+                onClick={handleCreatePlayer}
+                disabled={loading}
+                className="w-full"
+              >
+                {loading ? "Creating..." : "Create Player"}
+              </Button>
+            </CardContent>
+          )}
+          {players.length > 0 && (
+            <CardContent className="pt-0">
+              <div className="space-y-2">
+                {players.map((player) => (
+                  <Card key={player.id} className="p-4">
+                    {editingPlayer?.id === player.id ? (
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-xs font-medium">Name</label>
+                            <Input
+                              value={editingPlayer.name}
+                              onChange={(e) => setEditingPlayer({ ...editingPlayer, name: e.target.value })}
+                              className="h-8"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium">Max Spell Level</label>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                                onClick={() => setEditingPlayer({ ...editingPlayer, maxSpellLevel: Math.max(0, editingPlayer.maxSpellLevel - 1) })}
+                              >
+                                -
+                              </Button>
+                              <Input
+                                type="number"
+                                min="0"
+                                max="9"
+                                value={editingPlayer.maxSpellLevel}
+                                onChange={(e) => setEditingPlayer({ ...editingPlayer, maxSpellLevel: Math.max(0, Math.min(9, parseInt(e.target.value) || 0)) })}
+                                className="h-8 text-center"
+                              />
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                                onClick={() => setEditingPlayer({ ...editingPlayer, maxSpellLevel: Math.min(9, editingPlayer.maxSpellLevel + 1) })}
+                              >
+                                +
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium">Prisms</label>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {availablePrisms.map((prism) => {
+                              const isSelected = editingPlayer.prisms.includes(prism);
+                              return (
+                                <Button
+                                  key={prism}
+                                  type="button"
+                                  variant={isSelected ? "default" : "outline"}
+                                  size="sm"
+                                  className="h-7 text-xs"
+                                  onClick={() => {
+                                    setEditingPlayer({
+                                      ...editingPlayer,
+                                      prisms: isSelected
+                                        ? editingPlayer.prisms.filter(p => p !== prism)
+                                        : [...editingPlayer.prisms, prism]
+                                    });
+                                  }}
+                                >
+                                  {prism}
+                                </Button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => handleUpdatePlayer(editingPlayer)}
+                            disabled={loading}
+                          >
+                            <Save className="w-3 h-3 mr-1" />
+                            Save
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setEditingPlayer(null)}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="font-semibold">{player.name}</h4>
+                            <Badge variant="outline">Max Spell Lvl {player.maxSpellLevel}</Badge>
+                            <Badge variant="secondary">
+                              Can cast: {getAvailableSpellLevels(player.maxSpellLevel).join(', ')}
+                            </Badge>
+                          </div>
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {player.prisms.length > 0 ? (
+                              player.prisms.map((prism) => (
+                                <Badge key={prism} variant="default" className="text-xs">
+                                  {prism}
+                                </Badge>
+                              ))
+                            ) : (
+                              <span className="text-xs text-muted-foreground">No prisms assigned</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex gap-2 ml-4">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setEditingPlayer(player)}
+                          >
+                            <Edit2 className="w-3 h-3" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeletePlayer(player.id, player.name)}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </Card>
+                ))}
+              </div>
+            </CardContent>
+          )}
         </Card>
 
         {/* Custom Spell Creation */}

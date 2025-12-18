@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, Sparkles, Plus, Minus, ArrowLeft, Hash, Check } from "lucide-react";
+import { Search, Sparkles, Plus, Minus, ArrowLeft, Hash, Check, User, X } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,8 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command";
+import type { Player } from "@/lib/player-utils";
+import { getAvailableSpellLevels } from "@/lib/player-utils";
 
 interface Spell {
   name: string;
@@ -44,6 +46,10 @@ export default function Home() {
   const [selectedLevels, setSelectedLevels] = useState<number[]>([]);
   const [commandOpen, setCommandOpen] = useState(false);
   const [commandSearchQuery, setCommandSearchQuery] = useState("");
+  
+  // Player filter state
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   
   // Strain Meter state (persisted in localStorage)
   const [strain, setStrain] = useState(0);
@@ -117,9 +123,26 @@ export default function Home() {
     }
   };
 
+  // Load players from API
+  const loadPlayers = async () => {
+    try {
+      const response = await fetch("/api/players", {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+        }
+      });
+      const data = await response.json();
+      setPlayers(data);
+    } catch (error) {
+      console.error("Error loading players:", error);
+    }
+  };
+
   useEffect(() => {
     loadSpells();
     loadPrisms();
+    loadPlayers();
     
     const handleVisibilityChange = () => {
       if (!document.hidden) {
@@ -227,6 +250,23 @@ export default function Home() {
         ? prev.filter((l) => l !== level)
         : [...prev, level]
     );
+  };
+
+  const applyPlayerFilter = (player: Player) => {
+    setSelectedPlayer(player);
+    // Apply the player's prisms
+    setSelectedPrisms(player.prisms);
+    setIncludeNoPrism(false);
+    // Apply spell levels based on max spell level
+    const availableLevels = getAvailableSpellLevels(player.maxSpellLevel);
+    setSelectedLevels(availableLevels);
+  };
+
+  const clearPlayerFilter = () => {
+    setSelectedPlayer(null);
+    setSelectedPrisms([]);
+    setIncludeNoPrism(false);
+    setSelectedLevels([]);
   };
 
   useEffect(() => {
@@ -420,6 +460,70 @@ export default function Home() {
             </kbd>
           </Button>
 
+          {/* Player Quick Filter */}
+          {players.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <User className="w-5 h-5" />
+                    <h3 className="text-sm font-semibold">Quick Filter by Player</h3>
+                  </div>
+                  {selectedPlayer && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearPlayerFilter}
+                      className="h-auto py-1 px-2 text-xs"
+                    >
+                      <X className="w-3 h-3 mr-1" />
+                      Clear
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {players.map((player) => {
+                    const isSelected = selectedPlayer?.id === player.id;
+                    return (
+                      <Button
+                        key={player.id}
+                        onClick={() => isSelected ? clearPlayerFilter() : applyPlayerFilter(player)}
+                        variant={isSelected ? "default" : "outline"}
+                        size="sm"
+                        className="rounded-full"
+                      >
+                        <User className="w-3 h-3 mr-1" />
+                        {player.name}
+                        <Badge variant={isSelected ? "secondary" : "outline"} className="ml-2 text-[10px] px-1">
+                          Max {player.maxSpellLevel}
+                        </Badge>
+                      </Button>
+                    );
+                  })}
+                </div>
+                {selectedPlayer && (
+                  <div className="mt-3 pt-3 border-t">
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Filtering to <span className="font-semibold">{selectedPlayer.name}'s</span> accessible spells:
+                    </p>
+                    <div className="flex flex-wrap gap-1">
+                      <Badge variant="secondary" className="text-xs">
+                        Spell Levels: {getAvailableSpellLevels(selectedPlayer.maxSpellLevel).join(', ')}
+                      </Badge>
+                      {selectedPlayer.prisms.map((prism) => (
+                        <Badge key={prism} variant="default" className="text-xs">
+                          {prism}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+          
           {/* Prism Filter */}
           <Card>
             <CardHeader className="pb-3">
