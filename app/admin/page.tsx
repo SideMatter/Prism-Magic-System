@@ -8,6 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
+import {
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 
 interface Spell {
   name: string;
@@ -30,6 +38,7 @@ export default function AdminPage() {
   const [spells, setSpells] = useState<SpellWithPrism[]>([]);
   const [filteredSpells, setFilteredSpells] = useState<SpellWithPrism[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [commandOpen, setCommandOpen] = useState(false);
   const [editingSpell, setEditingSpell] = useState<string | null>(null);
   const [selectedPrisms, setSelectedPrisms] = useState<string[]>([]);
   const [availablePrisms, setAvailablePrisms] = useState<string[]>([]);
@@ -117,6 +126,19 @@ export default function AdminPage() {
     );
     setFilteredSpells(filtered);
   }, [searchQuery, spells]);
+
+  // Command palette keyboard shortcut
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setCommandOpen((open) => !open);
+      }
+    };
+
+    document.addEventListener("keydown", down);
+    return () => document.removeEventListener("keydown", down);
+  }, []);
 
   const handleEdit = (spell: SpellWithPrism) => {
     setEditingSpell(spell.name);
@@ -559,19 +581,19 @@ export default function AdminPage() {
         </Card>
 
         {/* Search */}
-        <Card className="mb-6">
-          <CardContent className="pt-6">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
-              <Input
-                placeholder="Search spells..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </CardContent>
-        </Card>
+        <div className="mb-6">
+          <Button
+            variant="outline"
+            className="w-full justify-start text-muted-foreground"
+            onClick={() => setCommandOpen(true)}
+          >
+            <Search className="w-4 h-4 mr-2" />
+            <span>Search spells...</span>
+            <kbd className="pointer-events-none ml-auto inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
+              <span className="text-xs">⌘</span>K
+            </kbd>
+          </Button>
+        </div>
 
         {/* Spell List */}
         {loading ? (
@@ -582,7 +604,7 @@ export default function AdminPage() {
         ) : (
           <div className="space-y-3">
             {filteredSpells.map((spell) => (
-              <Card key={spell.name}>
+              <Card key={spell.name} data-spell-name={spell.name}>
                 <CardContent className="pt-6">
                   {editingSpell === spell.name ? (
                     <div className="space-y-4">
@@ -689,6 +711,76 @@ export default function AdminPage() {
           </Card>
         )}
       </div>
+
+      {/* Command Dialog */}
+      <CommandDialog open={commandOpen} onOpenChange={setCommandOpen}>
+        <CommandInput
+          placeholder="Search spells..."
+          value={searchQuery}
+          onValueChange={setSearchQuery}
+        />
+        <CommandList>
+          <CommandEmpty>No spells found.</CommandEmpty>
+          <CommandGroup heading="Spells">
+            {filteredSpells.slice(0, 50).map((spell) => (
+              <CommandItem
+                key={spell.name}
+                value={spell.name}
+                onSelect={() => {
+                  setCommandOpen(false);
+                  // Scroll to the spell in the list
+                  const element = document.querySelector(`[data-spell-name="${spell.name}"]`);
+                  if (element) {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    // Highlight briefly
+                    element.classList.add('ring-2', 'ring-primary');
+                    setTimeout(() => {
+                      element.classList.remove('ring-2', 'ring-primary');
+                    }, 2000);
+                  }
+                }}
+              >
+                <div className="flex flex-col gap-0.5 flex-1">
+                  <span className="font-medium">{spell.name}</span>
+                  <span className="text-xs text-muted-foreground">
+                    Level {spell.level} • {spell.school}
+                    {spell.isCustom && " • Custom"}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {spell.prism ? (
+                    Array.isArray(spell.prism) ? (
+                      spell.prism.map((prism) => (
+                        <Badge
+                          key={prism}
+                          variant="outline"
+                          className="text-[10px] px-1 py-0"
+                        >
+                          {prism}
+                        </Badge>
+                      ))
+                    ) : (
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] px-1 py-0"
+                      >
+                        {spell.prism}
+                      </Badge>
+                    )
+                  ) : (
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] px-1 py-0"
+                    >
+                      No Prism
+                    </Badge>
+                  )}
+                </div>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        </CommandList>
+      </CommandDialog>
     </div>
   );
 }

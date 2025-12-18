@@ -33,7 +33,6 @@ interface SpellWithPrism extends Spell {
 }
 
 export default function Home() {
-  const [searchQuery, setSearchQuery] = useState("");
   const [spells, setSpells] = useState<SpellWithPrism[]>([]);
   const [filteredSpells, setFilteredSpells] = useState<SpellWithPrism[]>([]);
   const [selectedSpell, setSelectedSpell] = useState<SpellWithPrism | null>(null);
@@ -44,6 +43,7 @@ export default function Home() {
   const [includeNoPrism, setIncludeNoPrism] = useState(false);
   const [selectedLevels, setSelectedLevels] = useState<number[]>([]);
   const [commandOpen, setCommandOpen] = useState(false);
+  const [commandSearchQuery, setCommandSearchQuery] = useState("");
   
   // Strain Meter state (persisted in localStorage)
   const [strain, setStrain] = useState(0);
@@ -232,13 +232,7 @@ export default function Home() {
   useEffect(() => {
     let filtered = spells;
 
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter((spell) =>
-        spell.name.toLowerCase().includes(query)
-      );
-    }
-
+    // Main page list is only filtered by prism and level, not by search query
     if (selectedPrisms.length > 0 || includeNoPrism) {
       filtered = filtered.filter((spell) => {
         const hasPrism = !!spell.prism;
@@ -270,7 +264,51 @@ export default function Home() {
     }
 
     setFilteredSpells(filtered);
-  }, [searchQuery, spells, selectedPrisms, includeNoPrism, selectedLevels]);
+  }, [spells, selectedPrisms, includeNoPrism, selectedLevels]);
+
+  // Separate filtered list for command dialog (includes search query)
+  const commandFilteredSpells = (() => {
+    let filtered = spells;
+
+    // Apply search query filter
+    if (commandSearchQuery.trim()) {
+      const query = commandSearchQuery.toLowerCase();
+      filtered = filtered.filter((spell) =>
+        spell.name.toLowerCase().includes(query)
+      );
+    }
+
+    // Apply prism filters
+    if (selectedPrisms.length > 0 || includeNoPrism) {
+      filtered = filtered.filter((spell) => {
+        const hasPrism = !!spell.prism;
+
+        if (!hasPrism) {
+          return includeNoPrism;
+        }
+
+        const spellPrisms = (Array.isArray(spell.prism)
+          ? spell.prism
+          : [spell.prism]
+        ).filter((p): p is string => typeof p === "string" && p.length > 0);
+
+        const matchesPrism = spellPrisms.some((prism) =>
+          selectedPrisms.includes(prism)
+        );
+
+        return matchesPrism;
+      });
+    }
+
+    // Apply level filters
+    if (selectedLevels.length > 0) {
+      filtered = filtered.filter((spell) =>
+        selectedLevels.includes(spell.level)
+      );
+    }
+
+    return filtered;
+  })();
 
   const strainPercentage = maxStrain > 0 ? (strain / maxStrain) * 100 : 0;
 
@@ -578,7 +616,9 @@ export default function Home() {
                 {filteredSpells.length === 0 ? (
                   <div className="text-center py-12">
                     <p className="text-muted-foreground">
-                      {searchQuery ? "No spells found matching your search." : "No spells available."}
+                      {(selectedPrisms.length > 0 || includeNoPrism || selectedLevels.length > 0)
+                        ? "No spells found matching your filters."
+                        : "No spells available."}
                     </p>
                   </div>
                 ) : (
@@ -646,11 +686,20 @@ export default function Home() {
       </div>
 
       {/* Command Dialog */}
-      <CommandDialog open={commandOpen} onOpenChange={setCommandOpen}>
+      <CommandDialog 
+        open={commandOpen} 
+        onOpenChange={(open) => {
+          setCommandOpen(open);
+          if (!open) {
+            // Clear search query when dialog closes
+            setCommandSearchQuery("");
+          }
+        }}
+      >
         <CommandInput
           placeholder="Search for a spell or filter..."
-          value={searchQuery}
-          onValueChange={setSearchQuery}
+          value={commandSearchQuery}
+          onValueChange={setCommandSearchQuery}
         />
         <CommandList>
           <CommandEmpty>No results found.</CommandEmpty>
@@ -705,7 +754,7 @@ export default function Home() {
           <CommandSeparator />
 
           <CommandGroup heading="Spells">
-            {filteredSpells.slice(0, 50).map((spell) => (
+            {commandFilteredSpells.slice(0, 50).map((spell) => (
               <CommandItem
                 key={spell.name}
                 value={spell.name}
