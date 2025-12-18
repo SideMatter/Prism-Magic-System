@@ -1,96 +1,43 @@
 import { NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
+import { storage } from "@/lib/storage";
 import type { Player } from "@/lib/player-utils";
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
 
 const PLAYERS_KEY = "prism:players";
-const DATA_DIR = path.join(process.cwd(), "data");
-const PLAYERS_FILE = path.join(DATA_DIR, "players.json");
 
-// Check if we should use Redis/KV
-const USE_KV = !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
-
-// Ensure data directory exists
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-}
-
-// File-based storage functions (fallback for local dev)
-function readPlayersFromFile(): Player[] {
-  try {
-    if (fs.existsSync(PLAYERS_FILE)) {
-      const data = fs.readFileSync(PLAYERS_FILE, "utf-8");
-      return JSON.parse(data);
-    }
-  } catch (error) {
-    console.error("Error reading players file:", error);
-  }
-  return [];
-}
-
-function writePlayersToFile(players: Player[]): void {
-  try {
-    fs.writeFileSync(PLAYERS_FILE, JSON.stringify(players, null, 2), "utf-8");
-  } catch (error) {
-    console.error("Error writing players file:", error);
-  }
-}
-
-// Get KV client (lazy load)
-async function getKVClient() {
-  if (!USE_KV) return null;
-  try {
-    const { kv } = await import("@vercel/kv");
-    return kv;
-  } catch (error) {
-    console.warn("Failed to load @vercel/kv, using file storage:", error);
-    return null;
-  }
-}
-
-// Get players from storage (KV or file)
+// Get players from storage
 async function getPlayers(): Promise<Player[]> {
-  if (USE_KV) {
-    try {
-      const kvClient = await getKVClient();
-      if (kvClient) {
-        const players = await kvClient.get<Player[]>(PLAYERS_KEY);
-        return players || [];
-      }
-    } catch (error) {
-      console.warn("KV get failed, falling back to file storage:", error);
-    }
+  try {
+    const players = await storage.get<Player[]>(PLAYERS_KEY);
+    return players || [];
+  } catch (error) {
+    console.error("Error getting players from storage:", error);
+    return [];
   }
-  return readPlayersFromFile();
 }
 
-// Save players to storage (KV or file)
+// Save players to storage
 async function savePlayers(players: Player[]): Promise<void> {
-  if (USE_KV) {
-    try {
-      const kvClient = await getKVClient();
-      if (kvClient) {
-        await kvClient.set(PLAYERS_KEY, players);
-        return;
-      }
-    } catch (error) {
-      console.warn("KV set failed, falling back to file storage:", error);
-    }
+  try {
+    await storage.set(PLAYERS_KEY, players);
+  } catch (error) {
+    console.error("Error saving players to storage:", error);
+    throw error;
   }
-  writePlayersToFile(players);
 }
 
 // GET - Fetch all players
 export async function GET() {
   try {
+    console.log("GET /api/players - Fetching players");
     const players = await getPlayers();
+    console.log(`GET /api/players - Retrieved ${players.length} players`);
     return NextResponse.json(players);
   } catch (error) {
-    console.error("Error fetching players:", error);
-    return NextResponse.json({ error: "Failed to fetch players" }, { status: 500 });
+    console.error("GET /api/players - Error fetching players:", error);
+    return NextResponse.json({ error: "Failed to fetch players", details: error instanceof Error ? error.message : String(error) }, { status: 500 });
   }
 }
 
@@ -99,6 +46,8 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { name, maxSpellLevel, prisms } = body;
+    
+    console.log("POST /api/players - Creating player:", { name, maxSpellLevel, prisms });
 
     if (!name || typeof name !== "string" || !name.trim()) {
       return NextResponse.json({ error: "Player name is required" }, { status: 400 });
@@ -113,6 +62,7 @@ export async function POST(request: Request) {
     }
 
     const players = await getPlayers();
+    console.log(`POST /api/players - Current players count: ${players.length}`);
 
     // Check for duplicate name
     if (players.some(p => p.name.toLowerCase() === name.trim().toLowerCase())) {
@@ -128,11 +78,15 @@ export async function POST(request: Request) {
 
     players.push(newPlayer);
     await savePlayers(players);
+    console.log("POST /api/players - Player created successfully:", newPlayer.id);
 
     return NextResponse.json(newPlayer, { status: 201 });
   } catch (error) {
-    console.error("Error creating player:", error);
-    return NextResponse.json({ error: "Failed to create player" }, { status: 500 });
+    console.error("POST /api/players - Error creating player:", error);
+    return NextResponse.json({ 
+      error: "Failed to create player", 
+      details: error instanceof Error ? error.message : String(error) 
+    }, { status: 500 });
   }
 }
 
