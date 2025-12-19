@@ -1,12 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Zap, Plus, X, Calculator, Sparkles, ArrowLeft, Home } from "lucide-react";
+import { Zap, Plus, X, Calculator, Sparkles } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import Link from "next/link";
 
 interface Spell {
   name: string;
@@ -85,26 +84,32 @@ export default function SpellCombinerPage() {
   const parseDamage = (spell: Spell): DamageInfo => {
     const description = spell.description.toLowerCase();
     const dicePattern = /(\d+d\d+(?:\s*\+\s*\d+)?)/gi;
-    const matches = description.match(dicePattern) || [];
+    const allMatches = description.match(dicePattern) || [];
     
     // Extract damage type
     const damageTypes = ['fire', 'cold', 'lightning', 'thunder', 'acid', 'poison', 'necrotic', 'radiant', 'force', 'psychic', 'piercing', 'slashing', 'bludgeoning'];
     const foundType = damageTypes.find(type => description.includes(type)) || 'untyped';
     
-    // Calculate average damage
-    let averageDamage = 0;
-    matches.forEach(dice => {
-      const [numDice, sides, modifier] = dice.match(/(\d+)d(\d+)(?:\+(\d+))?/i)?.slice(1) || [];
-      if (numDice && sides) {
-        const avg = (parseInt(numDice) * (parseInt(sides) + 1)) / 2;
-        averageDamage += avg + (modifier ? parseInt(modifier) : 0);
+    // If multiple dice notations found (upcast versions), pick the highest one
+    let bestDice = '';
+    let highestAverage = 0;
+    
+    allMatches.forEach(dice => {
+      const match = dice.match(/(\d+)d(\d+)(?:\+(\d+))?/i);
+      if (match) {
+        const [, numDice, sides, modifier] = match;
+        const avg = (parseInt(numDice) * (parseInt(sides) + 1)) / 2 + (modifier ? parseInt(modifier) : 0);
+        if (avg > highestAverage) {
+          highestAverage = avg;
+          bestDice = dice;
+        }
       }
     });
 
     return {
-      diceNotation: matches,
+      diceNotation: bestDice ? [bestDice] : [],
       damageType: foundType,
-      averageDamage: Math.round(averageDamage)
+      averageDamage: Math.round(highestAverage)
     };
   };
 
@@ -149,26 +154,13 @@ export default function SpellCombinerPage() {
       {/* Header */}
       <div className="border-b bg-card">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex items-center justify-center">
+            <div className="text-center">
               <h1 className="text-3xl font-bold flex items-center gap-2">
                 <Zap className="w-8 h-8" />
                 Spell Combiner
               </h1>
               <p className="text-muted-foreground mt-1">Combine multiple spells and calculate total damage</p>
-            </div>
-            <div className="flex gap-2">
-              <Link href="/admin">
-                <Button variant="outline" size="sm">
-                  Admin
-                </Button>
-              </Link>
-              <Link href="/">
-                <Button variant="outline" size="sm">
-                  <Home className="w-4 h-4 mr-2" />
-                  Home
-                </Button>
-              </Link>
             </div>
           </div>
         </div>
