@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, Sparkles, Plus, Minus, ArrowLeft, Hash, Check, User, X } from "lucide-react";
+import { Search, Sparkles, Plus, Minus, ArrowLeft, Hash, Check, User, X, Zap } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/command";
 import type { Player } from "@/lib/player-utils";
 import { getAvailableSpellLevels } from "@/lib/player-utils";
+import Link from "next/link";
 
 interface Spell {
   name: string;
@@ -357,9 +358,17 @@ export default function Home() {
       {/* Header */}
       <div className="sticky top-0 z-10 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold">Prism Magic System</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">Search for D&D 5e spells and discover their prism</p>
+          <div className="flex items-center justify-between">
+            <div className="flex-1 text-center">
+              <h1 className="text-2xl font-bold">Prism Magic System</h1>
+              <p className="text-sm text-muted-foreground mt-0.5">Search for D&D 5e spells and discover their prism</p>
+            </div>
+            <Link href="/spell-combiner">
+              <Button variant="outline" size="sm">
+                <Zap className="w-4 h-4 mr-2" />
+                Combiner
+              </Button>
+            </Link>
           </div>
         </div>
       </div>

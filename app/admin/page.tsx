@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Save, Search, X, Plus, Trash2, Edit2, Home, User, ArrowUp, ArrowDown } from "lucide-react";
+import { Save, Search, X, Plus, Trash2, Edit2, Home, User, ArrowUp, ArrowDown, Zap } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -509,12 +509,20 @@ export default function AdminPage() {
             <h1 className="text-4xl font-bold mb-2">Admin Panel</h1>
             <p className="text-muted-foreground">Manage spells and prisms</p>
           </div>
-          <Link href="/">
-            <Button variant="outline">
-              <Home className="w-4 h-4 mr-2" />
-              Back to Home
-            </Button>
-          </Link>
+          <div className="flex gap-2">
+            <Link href="/spell-combiner">
+              <Button variant="outline">
+                <Zap className="w-4 h-4 mr-2" />
+                Combiner
+              </Button>
+            </Link>
+            <Link href="/">
+              <Button variant="outline">
+                <Home className="w-4 h-4 mr-2" />
+                Home
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Status Message */}
