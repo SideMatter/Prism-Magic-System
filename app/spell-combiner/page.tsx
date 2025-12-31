@@ -1,11 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Zap, Plus, X, Calculator, Sparkles } from "lucide-react";
+import { Zap, Plus, X, Calculator, Sparkles, User } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import type { Player } from "@/lib/player-utils";
+import { getAvailableSpellLevels } from "@/lib/player-utils";
+import { getStrainCost } from "@/lib/utils";
 
 interface Spell {
   name: string;
@@ -40,10 +43,12 @@ export default function SpellCombinerPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSpells, setSelectedSpells] = useState<Spell[]>([]);
   const [loading, setLoading] = useState(false);
+  const [alexPlayer, setAlexPlayer] = useState<Player | null>(null);
 
-  // Load spells
+  // Load spells and players
   useEffect(() => {
     loadSpells();
+    loadPlayers();
   }, []);
 
   const loadSpells = async () => {
@@ -57,7 +62,6 @@ export default function SpellCombinerPage() {
       });
       const data = await response.json();
       setSpells(data);
-      setFilteredSpells(data);
     } catch (error) {
       console.error("Error loading spells:", error);
     } finally {
@@ -65,20 +69,66 @@ export default function SpellCombinerPage() {
     }
   };
 
-  // Filter spells by search
+  const loadPlayers = async () => {
+    try {
+      const response = await fetch("/api/players", {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+        }
+      });
+      const data = await response.json();
+      // Find Alex by name (case-insensitive)
+      const alex = data.find((p: Player) => p.name.toLowerCase() === 'alex');
+      if (alex) {
+        setAlexPlayer(alex);
+      }
+    } catch (error) {
+      console.error("Error loading players:", error);
+    }
+  };
+
+  // Filter spells by Alex's access and search query
   useEffect(() => {
-    if (!searchQuery.trim()) {
-      setFilteredSpells(spells);
-      return;
+    let filtered = spells;
+
+    // Filter by Alex's access if Alex is found
+    if (alexPlayer) {
+      const availableLevels = getAvailableSpellLevels(alexPlayer.maxSpellLevel);
+      
+      filtered = filtered.filter((spell) => {
+        // Check spell level
+        if (!availableLevels.includes(spell.level)) {
+          return false;
+        }
+
+        // Check prism access
+        if (!spell.prism) {
+          // Spells without prisms are not accessible
+          return false;
+        }
+
+        const spellPrisms = (Array.isArray(spell.prism)
+          ? spell.prism
+          : [spell.prism]
+        ).filter((p): p is string => typeof p === "string" && p.length > 0);
+
+        // Spell must have at least one prism that Alex has
+        return spellPrisms.some((prism) => alexPlayer.prisms.includes(prism));
+      });
     }
 
-    const query = searchQuery.toLowerCase();
-    const filtered = spells.filter((spell) =>
-      spell.name.toLowerCase().includes(query) ||
-      spell.school.toLowerCase().includes(query)
-    );
+    // Then filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((spell) =>
+        spell.name.toLowerCase().includes(query) ||
+        spell.school.toLowerCase().includes(query)
+      );
+    }
+
     setFilteredSpells(filtered);
-  }, [searchQuery, spells]);
+  }, [searchQuery, spells, alexPlayer]);
 
   // Parse damage from spell description
   const parseDamage = (spell: Spell): DamageInfo => {
@@ -125,8 +175,8 @@ export default function SpellCombinerPage() {
     const totalDamage = damageBreakdown.reduce((sum, item) => sum + item.damage.averageDamage, 0);
     const totalLevel = selectedSpells.reduce((sum, spell) => sum + spell.level, 0);
     
-    // Strain cost: 1 per spell
-    const strainCost = selectedSpells.length;
+    // Strain cost: based on spell level (Cantrips: 0, 1-2: 1, 3-4: 2, 5-6: 4, 7: 7, 8: 10, 9: 14)
+    const strainCost = selectedSpells.reduce((sum, spell) => sum + getStrainCost(spell.level), 0);
 
     return {
       spells: selectedSpells,
@@ -156,11 +206,27 @@ export default function SpellCombinerPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-center">
             <div className="text-center">
-              <h1 className="text-3xl font-bold flex items-center gap-2">
+              <h1 className="text-3xl font-bold flex items-center justify-center gap-2">
                 <Zap className="w-8 h-8" />
                 Spell Combiner
               </h1>
               <p className="text-muted-foreground mt-1">Combine multiple spells and calculate total damage</p>
+              {alexPlayer && (
+                <div className="flex items-center justify-center gap-2 mt-3">
+                  <Badge variant="secondary" className="flex items-center gap-1">
+                    <User className="w-3 h-3" />
+                    {alexPlayer.name}'s Spells
+                  </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    Levels 0-{alexPlayer.maxSpellLevel}
+                  </Badge>
+                  {alexPlayer.prisms.map((prism) => (
+                    <Badge key={prism} variant="default" className="text-xs">
+                      {prism}
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -207,6 +273,9 @@ export default function SpellCombinerPage() {
                               <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-1">
                                   <h4 className="font-semibold text-sm">{spell.name}</h4>
+                                  <Badge variant="destructive" className="text-[10px] px-1.5 py-0 font-bold">
+                                    {getStrainCost(spell.level)} Strain
+                                  </Badge>
                                   {isSelected && <Badge variant="default" className="text-xs">Selected</Badge>}
                                 </div>
                                 <p className="text-xs text-muted-foreground">
@@ -281,9 +350,9 @@ export default function SpellCombinerPage() {
                             <div className="text-3xl font-bold text-primary">
                               {combination.strainCost}
                             </div>
-                            <div className="text-xs text-muted-foreground">Strain Cost</div>
+                            <div className="text-xs text-muted-foreground">Total Strain</div>
                             <div className="text-xs text-muted-foreground mt-1">
-                              (1 per spell)
+                              (by spell level)
                             </div>
                           </div>
                         </CardContent>
@@ -335,6 +404,9 @@ export default function SpellCombinerPage() {
                                   <div className="text-xs text-muted-foreground">
                                     ≈{item.damage.averageDamage} avg
                                   </div>
+                                  <Badge variant="destructive" className="mt-1 text-xs">
+                                    {getStrainCost(combination.spells.find(s => s.name === item.spell)?.level ?? 0)} strain
+                                  </Badge>
                                 </div>
                               </div>
                             </CardContent>

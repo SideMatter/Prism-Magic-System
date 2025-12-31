@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Search, Sparkles, Plus, Minus, ArrowLeft, Hash, Check, User, X } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Search, Sparkles, Plus, Minus, ArrowLeft, Hash, Check, User, X, Flame, Zap } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/command";
 import type { Player } from "@/lib/player-utils";
 import { getAvailableSpellLevels } from "@/lib/player-utils";
+import { getStrainCost } from "@/lib/utils";
 
 interface Spell {
   name: string;
@@ -53,14 +54,27 @@ export default function Home() {
   
   // Strain Meter state (persisted in localStorage)
   const [strain, setStrain] = useState(0);
+  const [tempStrain, setTempStrain] = useState(0);
   const [maxStrain, setMaxStrain] = useState(100);
+  
+  // Ref to track current tempStrain for use in decreaseStrain
+  const tempStrainRef = useRef(tempStrain);
+  useEffect(() => {
+    tempStrainRef.current = tempStrain;
+  }, [tempStrain]);
 
   // Load from localStorage after mount to avoid hydration mismatch
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedStrain = localStorage.getItem('strain');
+      const savedTempStrain = localStorage.getItem('tempStrain');
       const savedMaxStrain = localStorage.getItem('maxStrain');
       if (savedStrain) setStrain(parseInt(savedStrain, 10));
+      if (savedTempStrain) {
+        const tempValue = parseInt(savedTempStrain, 10);
+        setTempStrain(tempValue);
+        tempStrainRef.current = tempValue; // Also update ref immediately
+      }
       if (savedMaxStrain) setMaxStrain(parseInt(savedMaxStrain, 10));
     }
   }, []);
@@ -212,16 +226,48 @@ export default function Home() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      localStorage.setItem('tempStrain', tempStrain.toString());
+    }
+  }, [tempStrain]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
       localStorage.setItem('maxStrain', maxStrain.toString());
     }
   }, [maxStrain]);
 
   const increaseStrain = (amount: number = 1) => {
-    setStrain((prev) => Math.min(prev + amount, maxStrain));
+    // First consume temp strain, then add to normal strain
+    const currentTempStrain = tempStrainRef.current;
+    if (currentTempStrain > 0) {
+      const tempConsumption = Math.min(currentTempStrain, amount);
+      const remainingAmount = amount - tempConsumption;
+      const newTempValue = Math.max(currentTempStrain - tempConsumption, 0);
+      setTempStrain(newTempValue);
+      tempStrainRef.current = newTempValue;
+      if (remainingAmount > 0) {
+        setStrain((prev) => Math.min(prev + remainingAmount, maxStrain));
+      }
+    } else {
+      setStrain((prev) => Math.min(prev + amount, maxStrain));
+    }
   };
 
   const decreaseStrain = (amount: number = 1) => {
-    setStrain((prev) => Math.max(prev - amount, 0));
+    // First reduce temp strain, then normal strain
+    const currentTempStrain = tempStrainRef.current;
+    if (currentTempStrain > 0) {
+      const tempReduction = Math.min(currentTempStrain, amount);
+      const remainingReduction = amount - tempReduction;
+      const newTempValue = Math.max(currentTempStrain - tempReduction, 0);
+      setTempStrain(newTempValue);
+      tempStrainRef.current = newTempValue;
+      if (remainingReduction > 0) {
+        setStrain((prev) => Math.max(prev - remainingReduction, 0));
+      }
+    } else {
+      setStrain((prev) => Math.max(prev - amount, 0));
+    }
   };
 
   const setStrainValue = (value: number) => {
@@ -234,6 +280,34 @@ export default function Home() {
     if (strain > newMax) {
       setStrain(newMax);
     }
+  };
+
+  const increaseTempStrain = (amount: number = 1) => {
+    setTempStrain((prev) => {
+      const newValue = prev + amount;
+      tempStrainRef.current = newValue;
+      return newValue;
+    });
+  };
+
+  const decreaseTempStrain = (amount: number = 1) => {
+    setTempStrain((prev) => {
+      const newValue = Math.max(prev - amount, 0);
+      tempStrainRef.current = newValue;
+      return newValue;
+    });
+  };
+
+  const setTempStrainValue = (value: number) => {
+    const newValue = Math.max(0, value);
+    setTempStrain(newValue);
+    tempStrainRef.current = newValue;
+  };
+
+  const handleLongRest = () => {
+    setStrain(0);
+    setTempStrain(0);
+    tempStrainRef.current = 0;
   };
 
   const togglePrism = (prism: string) => {
@@ -362,17 +436,35 @@ export default function Home() {
             <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center justify-between">
-              <span>Strain Meter</span>
+              <div className="flex items-center gap-2">
+                <span>Strain Meter</span>
+                <Button
+                  onClick={handleLongRest}
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0 text-orange-500 hover:text-orange-600 hover:bg-orange-100 dark:hover:bg-orange-950"
+                  title="Long Rest - Reset all strain"
+                >
+                  <Flame className="w-4 h-4" />
+                </Button>
+              </div>
               <span className="text-sm font-normal text-muted-foreground">
-                {strain} / {maxStrain}
+                {strain}{tempStrain > 0 && <span className="text-cyan-500"> (+{tempStrain})</span>} / {maxStrain}
               </span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {/* Strain Bar */}
             <div className="w-full h-6 bg-secondary rounded-full overflow-hidden relative border">
+              {/* Temp strain indicator (cyan, behind the red) */}
+              {tempStrain > 0 && (
+                <div
+                  className="absolute h-full bg-cyan-500/40 transition-all duration-300 ease-out"
+                  style={{ width: `${Math.min(((strain + tempStrain) / maxStrain) * 100, 100)}%` }}
+                />
+              )}
               <div
-                className="h-full bg-destructive transition-all duration-300 ease-out flex items-center justify-end pr-2"
+                className="h-full bg-destructive transition-all duration-300 ease-out flex items-center justify-end pr-2 relative"
                 style={{ width: `${strainPercentage}%` }}
               >
                 {strainPercentage > 10 && (
@@ -388,8 +480,9 @@ export default function Home() {
               )}
             </div>
 
-            {/* Controls */}
+            {/* Strain Controls */}
             <div className="space-y-2">
+              <label className="text-xs text-muted-foreground">Strain</label>
               <div className="flex items-center gap-1">
                 <Button onClick={() => decreaseStrain(5)} variant="outline" size="sm" className="flex-1">
                   -5
@@ -412,16 +505,44 @@ export default function Home() {
                   +5
                 </Button>
               </div>
-              <div className="flex items-center gap-2">
-                <label className="text-xs text-muted-foreground whitespace-nowrap">Max:</label>
+            </div>
+
+            {/* Temp Strain Controls */}
+            <div className="space-y-2">
+              <label className="text-xs text-cyan-600 dark:text-cyan-400">Temp Strain</label>
+              <div className="flex items-center gap-1">
+                <Button onClick={() => decreaseTempStrain(5)} variant="outline" size="sm" className="flex-1 border-cyan-300 dark:border-cyan-700">
+                  -5
+                </Button>
+                <Button onClick={() => decreaseTempStrain(1)} variant="outline" size="sm" className="flex-1 border-cyan-300 dark:border-cyan-700">
+                  -1
+                </Button>
                 <Input
                   type="number"
-                  min="1"
-                  value={maxStrain}
-                  onChange={(e) => setMaxStrainValue(parseInt(e.target.value) || 1)}
-                  className="flex-1 text-center h-8 text-sm"
+                  min="0"
+                  value={tempStrain}
+                  onChange={(e) => setTempStrainValue(parseInt(e.target.value) || 0)}
+                  className="w-16 text-center h-9 border-cyan-300 dark:border-cyan-700"
                 />
+                <Button onClick={() => increaseTempStrain(1)} size="sm" className="flex-1 bg-cyan-600 hover:bg-cyan-700 text-white">
+                  +1
+                </Button>
+                <Button onClick={() => increaseTempStrain(5)} size="sm" className="flex-1 bg-cyan-600 hover:bg-cyan-700 text-white">
+                  +5
+                </Button>
               </div>
+            </div>
+
+            {/* Max Strain */}
+            <div className="flex items-center gap-2 pt-1 border-t">
+              <label className="text-xs text-muted-foreground whitespace-nowrap">Max:</label>
+              <Input
+                type="number"
+                min="1"
+                value={maxStrain}
+                onChange={(e) => setMaxStrainValue(parseInt(e.target.value) || 1)}
+                className="flex-1 text-center h-8 text-sm"
+              />
             </div>
           </CardContent>
         </Card>
@@ -619,14 +740,27 @@ export default function Home() {
                       <ArrowLeft className="w-4 h-4 mr-2" />
                       Back to search
                     </Button>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3 flex-wrap">
                       <CardTitle className="text-3xl">
                         {selectedSpell.name}
                       </CardTitle>
+                      <Badge variant="destructive" className="text-lg px-3 py-1 font-bold">
+                        {getStrainCost(selectedSpell.level)} Strain
+                      </Badge>
                       {selectedSpell.isCustom && (
                         <Badge>Custom Spell</Badge>
                       )}
                     </div>
+                    <Button
+                      onClick={() => increaseStrain(getStrainCost(selectedSpell.level))}
+                      variant="destructive"
+                      size="lg"
+                      className="mt-4"
+                      disabled={getStrainCost(selectedSpell.level) === 0}
+                    >
+                      <Zap className="w-5 h-5 mr-2" />
+                      Cast Spell (+{getStrainCost(selectedSpell.level)} Strain)
+                    </Button>
                   </CardHeader>
                   <CardContent className="space-y-6">
                     {selectedSpell.prism && (
@@ -659,15 +793,15 @@ export default function Home() {
                       </div>
                     )}
                     
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Level</p>
-                        <p className="text-lg font-semibold">{selectedSpell.level}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">School</p>
-                        <p className="text-lg font-semibold">{selectedSpell.school}</p>
-                      </div>
+<div className="grid grid-cols-2 gap-4">
+                                      <div>
+                                        <p className="text-sm text-muted-foreground">Level</p>
+                                        <p className="text-lg font-semibold">{selectedSpell.level === 0 ? 'Cantrip' : selectedSpell.level}</p>
+                                      </div>
+                                      <div>
+                                        <p className="text-sm text-muted-foreground">School</p>
+                                        <p className="text-lg font-semibold">{selectedSpell.school}</p>
+                                      </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Casting Time</p>
                         <p className="text-lg font-semibold">{selectedSpell.casting_time}</p>
@@ -721,6 +855,9 @@ export default function Home() {
                                   <CardTitle className="text-xl">
                                     {spell.name}
                                   </CardTitle>
+                                  <Badge variant="destructive" className="font-bold">
+                                    {getStrainCost(spell.level)} Strain
+                                  </Badge>
                                   {spell.isCustom && (
                                     <Badge variant="secondary">Custom</Badge>
                                   )}
@@ -850,7 +987,12 @@ export default function Home() {
                 }}
               >
                 <div className="flex flex-col gap-0.5 flex-1">
-                  <span className="font-medium">{spell.name}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{spell.name}</span>
+                    <Badge variant="destructive" className="text-[10px] px-1.5 py-0 font-bold">
+                      {getStrainCost(spell.level)} Strain
+                    </Badge>
+                  </div>
                   <span className="text-xs text-muted-foreground">
                     Level {spell.level} • {spell.school}
                   </span>
