@@ -35,10 +35,12 @@ export default function Home() {
   // Helper to parse component types from a component string like "V, S, M (a tiny ball...)"
   const parseComponentTypes = (components: string): string[] => {
     const types: string[] = [];
-    const upper = components.toUpperCase();
-    if (upper.includes('V')) types.push('V');
-    if (upper.includes('S')) types.push('S');
-    if (upper.includes('M')) types.push('M');
+    // Split by comma and check for standalone V, S, M before any parentheses
+    const mainPart = components.split('(')[0]; // Get part before material description
+    const parts = mainPart.split(',').map(p => p.trim().toUpperCase());
+    if (parts.includes('V')) types.push('V');
+    if (parts.includes('S')) types.push('S');
+    if (parts.includes('M')) types.push('M');
     return types;
   };
   
