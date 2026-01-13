@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { storage } from "@/lib/storage";
+import { getConvexClient } from "@/lib/convex";
+import { api } from "@/convex/_generated/api";
+
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
   try {
@@ -13,50 +16,30 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Spell name is required" }, { status: 400 });
     }
 
-    const mappings = await storage.loadMappings();
-    console.log(`Loaded ${Object.keys(mappings).length} existing mappings`);
-
-    const previousPrism = mappings[spellName];
+    const convex = getConvexClient();
     
-    // Handle both single prism (string) and multiple prisms (array)
+    // Normalize prism value
+    let normalizedPrism: string | string[] | null = null;
     if (prism) {
       if (Array.isArray(prism)) {
-        // Multiple prisms
-        if (prism.length > 0) {
-          mappings[spellName] = prism;
-          console.log(`Setting ${spellName} to [${prism.join(', ')}] (was: ${JSON.stringify(previousPrism) || 'none'})`);
-        } else {
-          // Empty array = remove prism
-          delete mappings[spellName];
-          console.log(`Removing prism from ${spellName} (empty array)`);
-        }
+        normalizedPrism = prism.length > 0 ? prism : null;
       } else if (typeof prism === 'string' && prism.trim()) {
-        // Single prism
-        mappings[spellName] = prism.trim();
-        console.log(`Setting ${spellName} to ${prism.trim()} (was: ${JSON.stringify(previousPrism) || 'none'})`);
-      } else {
-        // Invalid or empty string
-        delete mappings[spellName];
-        console.log(`Removing prism from ${spellName} (was: ${JSON.stringify(previousPrism) || 'none'})`);
+        normalizedPrism = prism.trim();
       }
-    } else {
-      // null or undefined = remove prism
-      delete mappings[spellName];
-      console.log(`Removing prism from ${spellName} (was: ${JSON.stringify(previousPrism) || 'none'})`);
     }
 
-    await storage.saveMappings(mappings);
-    
-    // Verify the save worked
-    const verifyMappings = await storage.loadMappings();
-    const savedPrism = verifyMappings[spellName];
-    console.log(`Verified save: ${spellName} = ${savedPrism || 'none'}`);
+    const result = await convex.mutation(api.spellMappings.update, {
+      spellName,
+      prism: normalizedPrism,
+    });
+
+    console.log("Update result:", result);
 
     return NextResponse.json({ 
       success: true, 
       message: "Spell updated successfully",
       spellName,
-      prism: savedPrism || null
+      prism: result.prism
     });
   } catch (error) {
     console.error("Error updating spell:", error);
@@ -67,4 +50,3 @@ export async function POST(request: Request) {
     }, { status: 500 });
   }
 }
-

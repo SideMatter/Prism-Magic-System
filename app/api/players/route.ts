@@ -1,43 +1,23 @@
 import { NextResponse } from "next/server";
-import { storage } from "@/lib/storage";
-import type { Player } from "@/lib/player-utils";
+import { getConvexClient } from "@/lib/convex";
+import { api } from "@/convex/_generated/api";
 
-// Force dynamic rendering
 export const dynamic = 'force-dynamic';
-
-const PLAYERS_KEY = "prism:players";
-
-// Get players from storage
-async function getPlayers(): Promise<Player[]> {
-  try {
-    const players = await storage.get<Player[]>(PLAYERS_KEY);
-    return players || [];
-  } catch (error) {
-    console.error("Error getting players from storage:", error);
-    return [];
-  }
-}
-
-// Save players to storage
-async function savePlayers(players: Player[]): Promise<void> {
-  try {
-    await storage.set(PLAYERS_KEY, players);
-  } catch (error) {
-    console.error("Error saving players to storage:", error);
-    throw error;
-  }
-}
 
 // GET - Fetch all players
 export async function GET() {
   try {
     console.log("GET /api/players - Fetching players");
-    const players = await getPlayers();
+    const convex = getConvexClient();
+    const players = await convex.query(api.players.list, {});
     console.log(`GET /api/players - Retrieved ${players.length} players`);
     return NextResponse.json(players);
   } catch (error) {
     console.error("GET /api/players - Error fetching players:", error);
-    return NextResponse.json({ error: "Failed to fetch players", details: error instanceof Error ? error.message : String(error) }, { status: 500 });
+    return NextResponse.json({ 
+      error: "Failed to fetch players", 
+      details: error instanceof Error ? error.message : String(error) 
+    }, { status: 500 });
   }
 }
 
@@ -61,31 +41,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Prisms must be an array" }, { status: 400 });
     }
 
-    const players = await getPlayers();
-    console.log(`POST /api/players - Current players count: ${players.length}`);
-
-    // Check for duplicate name
-    if (players.some(p => p.name.toLowerCase() === name.trim().toLowerCase())) {
-      return NextResponse.json({ error: "A player with this name already exists" }, { status: 400 });
-    }
-
-    const newPlayer: Player = {
-      id: `player-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    const convex = getConvexClient();
+    const newPlayer = await convex.mutation(api.players.create, {
       name: name.trim(),
       maxSpellLevel,
       prisms: prisms.filter((p: any) => typeof p === "string" && p.trim().length > 0),
-    };
+    });
 
-    players.push(newPlayer);
-    await savePlayers(players);
     console.log("POST /api/players - Player created successfully:", newPlayer.id);
-
     return NextResponse.json(newPlayer, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error("POST /api/players - Error creating player:", error);
+    const message = error?.message || "Failed to create player";
+    if (message.includes("already exists")) {
+      return NextResponse.json({ error: "A player with this name already exists" }, { status: 400 });
+    }
     return NextResponse.json({ 
       error: "Failed to create player", 
-      details: error instanceof Error ? error.message : String(error) 
+      details: message 
     }, { status: 500 });
   }
 }
@@ -102,49 +75,39 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: "Player ID is required" }, { status: 400 });
     }
 
-    const players = await getPlayers();
-    const playerIndex = players.findIndex(p => p.id === id);
+    // Validate updates
+    if (name !== undefined && (typeof name !== "string" || !name.trim())) {
+      return NextResponse.json({ error: "Player name cannot be empty" }, { status: 400 });
+    }
 
-    if (playerIndex === -1) {
+    if (maxSpellLevel !== undefined && (typeof maxSpellLevel !== "number" || maxSpellLevel < 0 || maxSpellLevel > 9)) {
+      return NextResponse.json({ error: "Max spell level must be between 0 and 9" }, { status: 400 });
+    }
+
+    if (prisms !== undefined && !Array.isArray(prisms)) {
+      return NextResponse.json({ error: "Prisms must be an array" }, { status: 400 });
+    }
+
+    const convex = getConvexClient();
+    const updatedPlayer = await convex.mutation(api.players.update, {
+      id,
+      name: name?.trim(),
+      maxSpellLevel,
+      prisms: prisms?.filter((p: any) => typeof p === "string" && p.trim().length > 0),
+    });
+
+    console.log("PUT /api/players - Player updated:", updatedPlayer);
+    return NextResponse.json(updatedPlayer);
+  } catch (error: any) {
+    console.error("Error updating player:", error);
+    const message = error?.message || "Failed to update player";
+    if (message.includes("not found")) {
       return NextResponse.json({ error: "Player not found" }, { status: 404 });
     }
-    
-    console.log("Found player at index:", playerIndex, "Current value:", players[playerIndex]);
-
-    // Validate updates
-    if (name !== undefined) {
-      if (typeof name !== "string" || !name.trim()) {
-        return NextResponse.json({ error: "Player name cannot be empty" }, { status: 400 });
-      }
-      // Check for duplicate name (excluding current player)
-      if (players.some((p, idx) => idx !== playerIndex && p.name.toLowerCase() === name.trim().toLowerCase())) {
-        return NextResponse.json({ error: "A player with this name already exists" }, { status: 400 });
-      }
-      players[playerIndex].name = name.trim();
+    if (message.includes("already exists")) {
+      return NextResponse.json({ error: "A player with this name already exists" }, { status: 400 });
     }
-
-    if (maxSpellLevel !== undefined) {
-      if (typeof maxSpellLevel !== "number" || maxSpellLevel < 0 || maxSpellLevel > 9) {
-        return NextResponse.json({ error: "Max spell level must be between 0 and 9" }, { status: 400 });
-      }
-      players[playerIndex].maxSpellLevel = maxSpellLevel;
-    }
-
-    if (prisms !== undefined) {
-      if (!Array.isArray(prisms)) {
-        return NextResponse.json({ error: "Prisms must be an array" }, { status: 400 });
-      }
-      players[playerIndex].prisms = prisms.filter((p: any) => typeof p === "string" && p.trim().length > 0);
-    }
-
-    console.log("Updated player:", players[playerIndex]);
-    await savePlayers(players);
-    console.log("Saved players to storage");
-
-    return NextResponse.json(players[playerIndex]);
-  } catch (error) {
-    console.error("Error updating player:", error);
-    return NextResponse.json({ error: "Failed to update player" }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
@@ -158,19 +121,16 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: "Player ID is required" }, { status: 400 });
     }
 
-    const players = await getPlayers();
-    const filteredPlayers = players.filter(p => p.id !== id);
-
-    if (filteredPlayers.length === players.length) {
-      return NextResponse.json({ error: "Player not found" }, { status: 404 });
-    }
-
-    await savePlayers(filteredPlayers);
+    const convex = getConvexClient();
+    await convex.mutation(api.players.remove, { id });
 
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error deleting player:", error);
-    return NextResponse.json({ error: "Failed to delete player" }, { status: 500 });
+    const message = error?.message || "Failed to delete player";
+    if (message.includes("not found")) {
+      return NextResponse.json({ error: "Player not found" }, { status: 404 });
+    }
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
-

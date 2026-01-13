@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { Navbar } from "@/components/navbar";
+import { ConvexClientProvider } from "@/components/convex-client-provider";
 
 export const metadata: Metadata = {
   title: "Prism Magic System - D&D 5e Spell Finder",
@@ -21,11 +22,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
-        <Navbar />
-        {children}
-        <Toaster />
+        <ConvexClientProvider>
+          <Navbar />
+          {children}
+          <Toaster />
+        </ConvexClientProvider>
       </body>
     </html>
   );
 }
-

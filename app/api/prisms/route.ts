@@ -1,54 +1,21 @@
 import { NextResponse } from "next/server";
-import { storage } from "@/lib/storage";
-import fs from "fs";
-import path from "path";
+import { getConvexClient } from "@/lib/convex";
+import { api } from "@/convex/_generated/api";
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const PRISMS_FILE = path.join(DATA_DIR, "prisms.json");
-
-async function loadPrisms(): Promise<string[]> {
-  let prisms = await storage.loadPrisms();
-  
-  // If no prisms exist, try to load from file system first (for migration)
-  if (prisms.length === 0 && fs.existsSync(PRISMS_FILE)) {
-    try {
-      const filePrisms = JSON.parse(fs.readFileSync(PRISMS_FILE, "utf-8"));
-      if (filePrisms.length > 0) {
-        console.log(`Migrating ${filePrisms.length} prisms from file system to storage`);
-        await storage.savePrisms(filePrisms);
-        prisms = filePrisms;
-      }
-    } catch (error) {
-      console.error("Error loading prisms from file:", error);
-    }
-  }
-  
-  // If still no prisms exist, initialize with defaults
-  if (prisms.length === 0) {
-    const defaultPrisms = [
-      "ARCANE PRISM",
-      "DIVINE PRISM",
-      "ELEMENTAL PRISM",
-      "FEY PRISM",
-      "FIENDISH PRISM",
-      "SHADOW PRISM",
-      "SOLAR PRISM",
-    ];
-    await storage.savePrisms(defaultPrisms);
-    // Also save to file system for backup
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
-    }
-    fs.writeFileSync(PRISMS_FILE, JSON.stringify(defaultPrisms, null, 2));
-    return defaultPrisms;
-  }
-  
-  return prisms;
-}
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const prisms = await loadPrisms();
+    const convex = getConvexClient();
+    const prisms = await convex.query(api.prisms.list, {});
+    
+    // Initialize defaults if empty
+    if (prisms.length === 0) {
+      await convex.mutation(api.prisms.initializeDefaults, {});
+      const newPrisms = await convex.query(api.prisms.list, {});
+      return NextResponse.json(newPrisms);
+    }
+    
     return NextResponse.json(prisms);
   } catch (error) {
     console.error("Error loading prisms:", error);
@@ -64,20 +31,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Prism name is required" }, { status: 400 });
     }
 
-    const prisms = await loadPrisms();
-    const prismName = name.trim();
+    const convex = getConvexClient();
+    const result = await convex.mutation(api.prisms.add, { name: name.trim() });
 
-    if (prisms.includes(prismName)) {
+    return NextResponse.json({ success: true, prism: result.name });
+  } catch (error: any) {
+    console.error("Error adding prism:", error);
+    const message = error?.message || "Failed to add prism";
+    if (message.includes("already exists")) {
       return NextResponse.json({ error: "Prism already exists" }, { status: 400 });
     }
-
-    prisms.push(prismName);
-    await storage.savePrisms(prisms);
-
-    return NextResponse.json({ success: true, prism: prismName });
-  } catch (error) {
-    console.error("Error adding prism:", error);
-    return NextResponse.json({ error: "Failed to add prism" }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
@@ -89,23 +53,12 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: "Prism name is required" }, { status: 400 });
     }
 
-    const prisms = await loadPrisms();
-    const filteredPrisms = prisms.filter((p) => p !== name);
-    await storage.savePrisms(filteredPrisms);
-
-    // Also remove from spell mappings
-    const mappings = await storage.loadMappings();
-    Object.keys(mappings).forEach((spellName) => {
-      if (mappings[spellName] === name) {
-        delete mappings[spellName];
-      }
-    });
-    await storage.saveMappings(mappings);
+    const convex = getConvexClient();
+    await convex.mutation(api.prisms.remove, { name });
 
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error deleting prism:", error);
-    return NextResponse.json({ error: "Failed to delete prism" }, { status: 500 });
+    return NextResponse.json({ error: error?.message || "Failed to delete prism" }, { status: 500 });
   }
 }
-

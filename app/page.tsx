@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Search, Sparkles, Plus, Minus, ArrowLeft, Hash, Check, User, X, Flame, Zap } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,33 +15,18 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command";
-import type { Player } from "@/lib/player-utils";
 import { getAvailableSpellLevels } from "@/lib/player-utils";
 import { getStrainCost } from "@/lib/utils";
-
-interface Spell {
-  name: string;
-  level: number;
-  school: string;
-  casting_time: string;
-  range: string;
-  components: string;
-  duration: string;
-  description: string;
-}
-
-interface SpellWithPrism extends Spell {
-  prism?: string | string[]; // Can have multiple prisms
-  isCustom?: boolean; // Indicates if this is a custom spell
-}
+import { useSpellData, usePlayers, type Spell, type Player } from "@/hooks/use-spell-data";
 
 export default function Home() {
-  const [spells, setSpells] = useState<SpellWithPrism[]>([]);
-  const [filteredSpells, setFilteredSpells] = useState<SpellWithPrism[]>([]);
-  const [selectedSpell, setSelectedSpell] = useState<SpellWithPrism | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [lastCacheTimestamp, setLastCacheTimestamp] = useState<string>("");
-  const [prisms, setPrisms] = useState<string[]>([]);
+  // Use Convex hooks for real-time data (no polling needed!)
+  const { spells, prisms, isLoading: spellsLoading } = useSpellData();
+  const { players, isLoading: playersLoading } = usePlayers();
+  
+  const loading = spellsLoading || playersLoading;
+  
+  const [selectedSpell, setSelectedSpell] = useState<Spell | null>(null);
   const [selectedPrisms, setSelectedPrisms] = useState<string[]>([]);
   const [includeNoPrism, setIncludeNoPrism] = useState(false);
   const [selectedLevels, setSelectedLevels] = useState<number[]>([]);
@@ -49,7 +34,6 @@ export default function Home() {
   const [commandSearchQuery, setCommandSearchQuery] = useState("");
   
   // Player filter state
-  const [players, setPlayers] = useState<Player[]>([]);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   
   // Strain Meter state (persisted in localStorage)
@@ -73,7 +57,7 @@ export default function Home() {
       if (savedTempStrain) {
         const tempValue = parseInt(savedTempStrain, 10);
         setTempStrain(tempValue);
-        tempStrainRef.current = tempValue; // Also update ref immediately
+        tempStrainRef.current = tempValue;
       }
       if (savedMaxStrain) setMaxStrain(parseInt(savedMaxStrain, 10));
     }
@@ -92,131 +76,15 @@ export default function Home() {
     return () => document.removeEventListener("keydown", down);
   }, []);
 
-  // Load spells from API
-  const loadSpells = async (showLoading = true) => {
-    if (showLoading) setLoading(true);
-    try {
-      const cacheBuster = Date.now();
-      const response = await fetch(`/api/spells?_=${cacheBuster}`, {
-        cache: 'no-store',
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-        },
-      });
-      const data = await response.json();
-      const cacheTimestamp = response.headers.get('X-Cache-Timestamp') || "";
-      
-      console.log(`✓ Loaded ${data.length} spells from API (timestamp: ${cacheTimestamp})`);
-      
-      setSpells(data);
-      setFilteredSpells(data);
-      setLastCacheTimestamp(cacheTimestamp);
-      
-      if (selectedSpell) {
-        const updatedSpell = data.find((s: SpellWithPrism) => s.name === selectedSpell.name);
-        if (updatedSpell) {
-          setSelectedSpell(updatedSpell);
-        }
-      }
-    } catch (error) {
-      console.error("❌ Error loading spells:", error);
-    } finally {
-      if (showLoading) setLoading(false);
-    }
-  };
-
-  // Load prisms from API
-  const loadPrisms = async () => {
-    try {
-      const response = await fetch("/api/prisms");
-      const data = await response.json();
-      setPrisms(data);
-    } catch (error) {
-      console.error("Error loading prisms:", error);
-    }
-  };
-
-  // Load players from API
-  const loadPlayers = async () => {
-    try {
-      const response = await fetch("/api/players", {
-        cache: 'no-store',
-        headers: {
-          'Cache-Control': 'no-cache',
-        }
-      });
-      const data = await response.json();
-      setPlayers(data);
-    } catch (error) {
-      console.error("Error loading players:", error);
-    }
-  };
-
+  // Update selected spell when spells data changes (real-time sync)
   useEffect(() => {
-    loadSpells();
-    loadPrisms();
-    loadPlayers();
-    
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        console.log("Page visible, reloading spells...");
-        loadSpells(false);
+    if (selectedSpell && spells.length > 0) {
+      const updatedSpell = spells.find((s) => s.name === selectedSpell.name);
+      if (updatedSpell && JSON.stringify(updatedSpell) !== JSON.stringify(selectedSpell)) {
+        setSelectedSpell(updatedSpell);
       }
-    };
-    
-    const handleFocus = () => {
-      console.log("Window focused, reloading spells...");
-      loadSpells(false);
-    };
-    
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'spell-update-trigger') {
-        console.log("Spell update detected from admin, reloading...");
-        loadSpells(false);
-      }
-    };
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleFocus);
-    window.addEventListener('storage', handleStorageChange);
-    
-    const interval = setInterval(async () => {
-      try {
-        const response = await fetch("/api/spells", {
-          cache: 'no-store',
-          headers: {
-            'Cache-Control': 'no-cache',
-          }
-        });
-        const cacheTimestamp = response.headers.get('X-Cache-Timestamp') || "";
-        const data = await response.json();
-        
-        if (cacheTimestamp !== lastCacheTimestamp) {
-          console.log(`Cache timestamp changed (${lastCacheTimestamp} → ${cacheTimestamp}), updating spells...`);
-          setSpells(data);
-          setFilteredSpells(data);
-          
-          setSelectedSpell((current) => {
-            if (!current) return current;
-            const updatedSpell = data.find((s: SpellWithPrism) => s.name === current.name);
-            return updatedSpell || current;
-          });
-          
-          setLastCacheTimestamp(cacheTimestamp);
-        }
-      } catch (error) {
-        console.error("Error polling for updates:", error);
-      }
-    }, 3000);
-    
-    return () => {
-      clearInterval(interval);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleFocus);
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, [lastCacheTimestamp]);
+    }
+  }, [spells, selectedSpell]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -237,7 +105,6 @@ export default function Home() {
   }, [maxStrain]);
 
   const increaseStrain = (amount: number = 1) => {
-    // First consume temp strain, then add to normal strain
     const currentTempStrain = tempStrainRef.current;
     if (currentTempStrain > 0) {
       const tempConsumption = Math.min(currentTempStrain, amount);
@@ -254,7 +121,6 @@ export default function Home() {
   };
 
   const decreaseStrain = (amount: number = 1) => {
-    // First reduce temp strain, then normal strain
     const currentTempStrain = tempStrainRef.current;
     if (currentTempStrain > 0) {
       const tempReduction = Math.min(currentTempStrain, amount);
@@ -328,10 +194,8 @@ export default function Home() {
 
   const applyPlayerFilter = (player: Player) => {
     setSelectedPlayer(player);
-    // Apply the player's prisms
     setSelectedPrisms(player.prisms);
     setIncludeNoPrism(false);
-    // Apply spell levels based on max spell level
     const availableLevels = getAvailableSpellLevels(player.maxSpellLevel);
     setSelectedLevels(availableLevels);
   };
@@ -343,56 +207,10 @@ export default function Home() {
     setSelectedLevels([]);
   };
 
-  useEffect(() => {
+  // Memoized filtered spells for better performance
+  const filteredSpells = useMemo(() => {
     let filtered = spells;
 
-    // Main page list is only filtered by prism and level, not by search query
-    if (selectedPrisms.length > 0 || includeNoPrism) {
-      filtered = filtered.filter((spell) => {
-        const hasPrism = !!spell.prism;
-
-        // Match "no prism" filter
-        if (!hasPrism) {
-          return includeNoPrism;
-        }
-
-        // Match selected prism chips
-        const spellPrisms = (Array.isArray(spell.prism)
-          ? spell.prism
-          : [spell.prism]
-        ).filter((p): p is string => typeof p === "string" && p.length > 0);
-
-        const matchesPrism = spellPrisms.some((prism) =>
-          selectedPrisms.includes(prism)
-        );
-
-        // If spell has prisms, only include it if it matches selected prisms
-        return matchesPrism;
-      });
-    }
-
-    if (selectedLevels.length > 0) {
-      filtered = filtered.filter((spell) =>
-        selectedLevels.includes(spell.level)
-      );
-    }
-
-    setFilteredSpells(filtered);
-  }, [spells, selectedPrisms, includeNoPrism, selectedLevels]);
-
-  // Separate filtered list for command dialog (includes search query)
-  const commandFilteredSpells = (() => {
-    let filtered = spells;
-
-    // Apply search query filter
-    if (commandSearchQuery.trim()) {
-      const query = commandSearchQuery.toLowerCase();
-      filtered = filtered.filter((spell) =>
-        spell.name.toLowerCase().includes(query)
-      );
-    }
-
-    // Apply prism filters
     if (selectedPrisms.length > 0 || includeNoPrism) {
       filtered = filtered.filter((spell) => {
         const hasPrism = !!spell.prism;
@@ -414,7 +232,6 @@ export default function Home() {
       });
     }
 
-    // Apply level filters
     if (selectedLevels.length > 0) {
       filtered = filtered.filter((spell) =>
         selectedLevels.includes(spell.level)
@@ -422,7 +239,48 @@ export default function Home() {
     }
 
     return filtered;
-  })();
+  }, [spells, selectedPrisms, includeNoPrism, selectedLevels]);
+
+  // Memoized command filtered spells
+  const commandFilteredSpells = useMemo(() => {
+    let filtered = spells;
+
+    if (commandSearchQuery.trim()) {
+      const query = commandSearchQuery.toLowerCase();
+      filtered = filtered.filter((spell) =>
+        spell.name.toLowerCase().includes(query)
+      );
+    }
+
+    if (selectedPrisms.length > 0 || includeNoPrism) {
+      filtered = filtered.filter((spell) => {
+        const hasPrism = !!spell.prism;
+
+        if (!hasPrism) {
+          return includeNoPrism;
+        }
+
+        const spellPrisms = (Array.isArray(spell.prism)
+          ? spell.prism
+          : [spell.prism]
+        ).filter((p): p is string => typeof p === "string" && p.length > 0);
+
+        const matchesPrism = spellPrisms.some((prism) =>
+          selectedPrisms.includes(prism)
+        );
+
+        return matchesPrism;
+      });
+    }
+
+    if (selectedLevels.length > 0) {
+      filtered = filtered.filter((spell) =>
+        selectedLevels.includes(spell.level)
+      );
+    }
+
+    return filtered;
+  }, [spells, commandSearchQuery, selectedPrisms, includeNoPrism, selectedLevels]);
 
   const strainPercentage = maxStrain > 0 ? (strain / maxStrain) * 100 : 0;
 
@@ -456,7 +314,6 @@ export default function Home() {
           <CardContent className="space-y-3">
             {/* Strain Bar */}
             <div className="w-full h-6 bg-secondary rounded-full overflow-hidden relative border">
-              {/* Temp strain indicator (cyan, behind the red) */}
               {tempStrain > 0 && (
                 <div
                   className="absolute h-full bg-cyan-500/40 transition-all duration-300 ease-out"
@@ -914,7 +771,6 @@ export default function Home() {
         onOpenChange={(open) => {
           setCommandOpen(open);
           if (!open) {
-            // Clear search query when dialog closes
             setCommandSearchQuery("");
           }
         }}

@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
-import { storage } from "@/lib/storage";
+import { getConvexClient } from "@/lib/convex";
+import { api } from "@/convex/_generated/api";
 import { CharacterClass } from "@/lib/npc-generator";
 
 export const dynamic = 'force-dynamic';
@@ -14,49 +15,35 @@ interface ClassesData {
   customClasses: CharacterClass[];
 }
 
-// Load classes from storage or file
-async function loadClasses(): Promise<ClassesData> {
-  // Always load from file first (prism-classes.json is the source of truth)
+// Load base classes from file (static data)
+function loadBaseClasses(): CharacterClass[] {
   if (fs.existsSync(CLASSES_FILE)) {
-    const data = fs.readFileSync(CLASSES_FILE, "utf-8");
-    const parsed = JSON.parse(data);
-    console.log(`Loaded ${parsed.classes?.length || 0} base classes from file`);
-    return parsed;
-  }
-
-  // Try storage as fallback
-  try {
-    const storedClasses = await storage.get<ClassesData>('classes');
-    if (storedClasses) {
-      console.log('Loaded classes from storage');
-      return storedClasses;
+    try {
+      const data = fs.readFileSync(CLASSES_FILE, "utf-8");
+      const parsed = JSON.parse(data);
+      return parsed.classes || [];
+    } catch (error) {
+      console.error("Error loading base classes from file:", error);
     }
-  } catch (error) {
-    console.log('Storage not available');
   }
-
-  // Return default empty structure
-  return { classes: [], customClasses: [] };
-}
-
-// Save classes to storage
-async function saveClasses(data: ClassesData): Promise<void> {
-  try {
-    await storage.set('classes', data);
-  } catch (error) {
-    console.log('Storage not available, saving to file');
-    fs.writeFileSync(CLASSES_FILE, JSON.stringify(data, null, 2));
-  }
+  return [];
 }
 
 export async function GET() {
   try {
-    const data = await loadClasses();
+    // Load base classes from file (these are static)
+    const baseClasses = loadBaseClasses();
+    console.log(`Loaded ${baseClasses.length} base classes from file`);
     
+    // Load custom classes from Convex
+    const convex = getConvexClient();
+    const customClasses = await convex.query(api.customClasses.list, {});
+    console.log(`Loaded ${customClasses.length} custom classes from Convex`);
+
     // Combine base classes with custom classes
     const allClasses = [
-      ...data.classes,
-      ...data.customClasses.map(c => ({ ...c, isCustom: true }))
+      ...baseClasses,
+      ...customClasses,
     ];
 
     return NextResponse.json(allClasses, {
@@ -85,21 +72,22 @@ export async function POST(request: Request) {
       );
     }
 
-    const data = await loadClasses();
-    
-    // Check for duplicate ID
-    const existingIndex = data.customClasses.findIndex(c => c.id === newClass.id);
-    if (existingIndex >= 0) {
-      // Update existing
-      data.customClasses[existingIndex] = { ...newClass, isCustom: true };
-    } else {
-      // Add new
-      data.customClasses.push({ ...newClass, isCustom: true });
-    }
+    const convex = getConvexClient();
+    const result = await convex.mutation(api.customClasses.upsert, {
+      id: newClass.id,
+      name: newClass.name,
+      hitDie: newClass.hitDie,
+      primaryAbilities: newClass.primaryAbilities || [],
+      savingThrows: newClass.savingThrows || [],
+      statPriority: newClass.statPriority,
+      description: newClass.description || "",
+      prism: newClass.prism,
+      type: newClass.type,
+      spellList: newClass.spellList,
+      features: newClass.features,
+    });
 
-    await saveClasses(data);
-
-    return NextResponse.json({ success: true, class: newClass });
+    return NextResponse.json({ success: true, class: result.class });
   } catch (error) {
     console.error("Error saving class:", error);
     return NextResponse.json(
@@ -121,27 +109,16 @@ export async function DELETE(request: Request) {
       );
     }
 
-    const data = await loadClasses();
-    
-    // Only allow deleting custom classes
-    const index = data.customClasses.findIndex(c => c.id === classId);
-    if (index < 0) {
-      return NextResponse.json(
-        { error: "Custom class not found" },
-        { status: 404 }
-      );
-    }
-
-    data.customClasses.splice(index, 1);
-    await saveClasses(data);
+    const convex = getConvexClient();
+    await convex.mutation(api.customClasses.remove, { id: classId });
 
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error deleting class:", error);
-    return NextResponse.json(
-      { error: "Failed to delete class" },
-      { status: 500 }
-    );
+    const message = error?.message || "Failed to delete class";
+    if (message.includes("not found")) {
+      return NextResponse.json({ error: "Custom class not found" }, { status: 404 });
+    }
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
-
