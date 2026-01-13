@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
-import { Search, Sparkles, Plus, Minus, ArrowLeft, Hash, Check, User, X, Flame, Zap } from "lucide-react";
+import { Search, Sparkles, Plus, Minus, ArrowLeft, Hash, Check, User, X, Flame, Zap, Volume2, Hand, Package } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,25 @@ export default function Home() {
   const [selectedPrisms, setSelectedPrisms] = useState<string[]>([]);
   const [includeNoPrism, setIncludeNoPrism] = useState(false);
   const [selectedLevels, setSelectedLevels] = useState<number[]>([]);
+  const [selectedComponents, setSelectedComponents] = useState<string[]>([]);
+  
+  // Helper to parse component types from a component string like "V, S, M (a tiny ball...)"
+  const parseComponentTypes = (components: string): string[] => {
+    const types: string[] = [];
+    const upper = components.toUpperCase();
+    if (upper.includes('V')) types.push('V');
+    if (upper.includes('S')) types.push('S');
+    if (upper.includes('M')) types.push('M');
+    return types;
+  };
+  
+  const toggleComponent = (comp: string) => {
+    setSelectedComponents((prev) =>
+      prev.includes(comp)
+        ? prev.filter((c) => c !== comp)
+        : [...prev, comp]
+    );
+  };
   const [commandOpen, setCommandOpen] = useState(false);
   const [commandSearchQuery, setCommandSearchQuery] = useState("");
   
@@ -205,6 +224,7 @@ export default function Home() {
     setSelectedPrisms([]);
     setIncludeNoPrism(false);
     setSelectedLevels([]);
+    setSelectedComponents([]);
   };
 
   // Memoized filtered spells for better performance
@@ -238,8 +258,15 @@ export default function Home() {
       );
     }
 
+    if (selectedComponents.length > 0) {
+      filtered = filtered.filter((spell) => {
+        const spellComponents = parseComponentTypes(spell.components);
+        return selectedComponents.every((comp) => spellComponents.includes(comp));
+      });
+    }
+
     return filtered;
-  }, [spells, selectedPrisms, includeNoPrism, selectedLevels]);
+  }, [spells, selectedPrisms, includeNoPrism, selectedLevels, selectedComponents]);
 
   // Memoized command filtered spells
   const commandFilteredSpells = useMemo(() => {
@@ -279,8 +306,15 @@ export default function Home() {
       );
     }
 
+    if (selectedComponents.length > 0) {
+      filtered = filtered.filter((spell) => {
+        const spellComponents = parseComponentTypes(spell.components);
+        return selectedComponents.every((comp) => spellComponents.includes(comp));
+      });
+    }
+
     return filtered;
-  }, [spells, commandSearchQuery, selectedPrisms, includeNoPrism, selectedLevels]);
+  }, [spells, commandSearchQuery, selectedPrisms, includeNoPrism, selectedLevels, selectedComponents]);
 
   const strainPercentage = maxStrain > 0 ? (strain / maxStrain) * 100 : 0;
 
@@ -574,6 +608,54 @@ export default function Home() {
               </p>
             </CardContent>
           </Card>
+
+          {/* Component Filter */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Package className="w-4 h-4" />
+                  <h3 className="text-sm font-semibold">Components</h3>
+                </div>
+                {selectedComponents.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedComponents([])}
+                    className="h-auto py-1 px-2 text-xs"
+                  >
+                    Clear all
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  { key: 'V', label: 'Verbal', icon: Volume2 },
+                  { key: 'S', label: 'Somatic', icon: Hand },
+                  { key: 'M', label: 'Material', icon: Package },
+                ].map(({ key, label, icon: Icon }) => {
+                  const isSelected = selectedComponents.includes(key);
+                  return (
+                    <Button
+                      key={key}
+                      onClick={() => toggleComponent(key)}
+                      variant={isSelected ? "default" : "outline"}
+                      size="sm"
+                      className="rounded-full text-xs h-7 gap-1.5"
+                    >
+                      <Icon className="w-3 h-3" />
+                      {label}
+                    </Button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Filter spells that require these components
+              </p>
+            </CardContent>
+          </Card>
         </aside>
 
         {/* Main Content Area - Spells */}
@@ -691,7 +773,7 @@ export default function Home() {
                 {filteredSpells.length === 0 ? (
                   <div className="text-center py-12">
                     <p className="text-muted-foreground">
-                      {(selectedPrisms.length > 0 || includeNoPrism || selectedLevels.length > 0)
+                      {(selectedPrisms.length > 0 || includeNoPrism || selectedLevels.length > 0 || selectedComponents.length > 0)
                         ? "No spells found matching your filters."
                         : "No spells available."}
                     </p>
@@ -822,6 +904,30 @@ export default function Home() {
                   onSelect={() => toggleLevel(level)}
                 >
                   <span>{level === 0 ? "Cantrips (0)" : `Level ${level}`}</span>
+                  {isSelected && (
+                    <Check className="w-4 h-4 ml-auto text-primary" />
+                  )}
+                </CommandItem>
+              );
+            })}
+          </CommandGroup>
+
+          <CommandSeparator />
+
+          <CommandGroup heading="Filter by Component">
+            {[
+              { key: 'V', label: 'Verbal', icon: Volume2 },
+              { key: 'S', label: 'Somatic', icon: Hand },
+              { key: 'M', label: 'Material', icon: Package },
+            ].map(({ key, label, icon: Icon }) => {
+              const isSelected = selectedComponents.includes(key);
+              return (
+                <CommandItem
+                  key={key}
+                  onSelect={() => toggleComponent(key)}
+                >
+                  <Icon className="w-4 h-4 mr-2" />
+                  <span>{label}</span>
                   {isSelected && (
                     <Check className="w-4 h-4 ml-auto text-primary" />
                   )}
