@@ -325,7 +325,7 @@ export default function Home() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Left Sidebar - Filters */}
-          <aside className="w-full lg:w-80 lg:sticky lg:top-[5.5rem] lg:self-start lg:h-[calc(100vh-7rem)] lg:overflow-y-auto space-y-4">
+          <aside className="w-full lg:w-80 lg:sticky lg:top-[5.5rem] lg:self-start lg:h-[calc(100vh-7rem)] lg:overflow-y-auto scrollbar-hide space-y-4">
             {/* Strain Meter */}
             <Card>
           <CardHeader className="pb-3">
