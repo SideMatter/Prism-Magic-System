@@ -30,4 +30,3 @@ export function getStrainCost(spellLevel: number): number {
     default: return 0;
   }
 }
-

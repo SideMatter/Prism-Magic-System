@@ -18,6 +18,7 @@ import {
 import { getAvailableSpellLevels } from "@/lib/player-utils";
 import { getStrainCost } from "@/lib/utils";
 import { useSpellData, usePlayers, type Spell, type Player } from "@/hooks/use-spell-data";
+import { parseDiceExpression, isDiceCommand, extractDiceExpression, type DiceResult } from "@/lib/dice";
 
 export default function Home() {
   // Use Convex hooks for real-time data (no polling needed!)
@@ -53,6 +54,7 @@ export default function Home() {
   };
   const [commandOpen, setCommandOpen] = useState(false);
   const [commandSearchQuery, setCommandSearchQuery] = useState("");
+  const [diceResult, setDiceResult] = useState<DiceResult | null>(null);
   
   // Player filter state
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
@@ -228,6 +230,7 @@ export default function Home() {
     setSelectedLevels([]);
     setSelectedComponents([]);
   };
+
 
   // Memoized filtered spells for better performance
   const filteredSpells = useMemo(() => {
@@ -856,17 +859,95 @@ export default function Home() {
           setCommandOpen(open);
           if (!open) {
             setCommandSearchQuery("");
+            setDiceResult(null);
           }
         }}
+        shouldFilter={!isDiceCommand(commandSearchQuery)}
       >
         <CommandInput
-          placeholder="Search for a spell or filter..."
+          placeholder="Search spells or type 'roll 1d20'..."
           value={commandSearchQuery}
-          onValueChange={setCommandSearchQuery}
+          onValueChange={(value) => {
+            setCommandSearchQuery(value);
+            // Auto-roll when typing a dice command
+            if (isDiceCommand(value)) {
+              const expression = extractDiceExpression(value);
+              const result = parseDiceExpression(expression);
+              setDiceResult(result);
+            } else {
+              setDiceResult(null);
+            }
+          }}
         />
         <CommandList>
-          <CommandEmpty>No results found.</CommandEmpty>
+          {/* Dice Roll Results */}
+          {diceResult && (
+            <div className="px-4 py-4">
+              <div className="flex items-center justify-between gap-4">
+                {/* Left side - Result */}
+                <div className="flex-1">
+                  <div className="text-6xl font-bold tracking-tight tabular-nums">
+                    {diceResult.total}
+                  </div>
+                  <div className="text-sm text-muted-foreground font-mono mt-1">
+                    {diceResult.breakdown}
+                  </div>
+                </div>
+                
+                {/* Right side - Dice badges */}
+                <div className="flex flex-wrap gap-1 justify-end">
+                  {diceResult.rolls.map((roll, index) => (
+                    <div key={index} className="flex items-center gap-1">
+                      {index > 0 && (
+                        <span className="text-muted-foreground mx-0.5">
+                          {roll.operator}
+                        </span>
+                      )}
+                      {roll.sides === 0 ? (
+                        <Badge variant="secondary" className="font-mono text-xs">
+                          {roll.total}
+                        </Badge>
+                      ) : (
+                        roll.rolls.map((r, ri) => (
+                          <Badge
+                            key={ri}
+                            variant={
+                              r === roll.sides
+                                ? "default"
+                                : r === 1
+                                ? "destructive"
+                                : "secondary"
+                            }
+                            className="font-mono text-xs"
+                          >
+                            {r}
+                          </Badge>
+                        ))
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground mt-3 text-center">
+                Edit the dice expression above to reroll
+              </p>
+            </div>
+          )}
 
+          {!diceResult && (
+            <CommandEmpty>
+              {isDiceCommand(commandSearchQuery) ? (
+                <div className="text-muted-foreground">
+                  Invalid dice format. Try: roll 1d20, roll 2d6+3, roll 2d4-1d6
+                </div>
+              ) : (
+                "No results found."
+              )}
+            </CommandEmpty>
+          )}
+
+          {!diceResult && (
+            <>
           <CommandGroup heading="Filter by Prism">
             <CommandItem
               onSelect={() => {
@@ -993,6 +1074,8 @@ export default function Home() {
               </CommandItem>
             ))}
           </CommandGroup>
+            </>
+          )}
         </CommandList>
       </CommandDialog>
     </div>
