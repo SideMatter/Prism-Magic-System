@@ -25,9 +25,9 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, maxSpellLevel, prisms } = body;
+    const { name, maxSpellLevel, prisms, playerClass, classInfo } = body;
     
-    console.log("POST /api/players - Creating player:", { name, maxSpellLevel, prisms });
+    console.log("POST /api/players - Creating player:", { name, maxSpellLevel, prisms, playerClass, classInfo });
 
     if (!name || typeof name !== "string" || !name.trim()) {
       return NextResponse.json({ error: "Player name is required" }, { status: 400 });
@@ -46,6 +46,8 @@ export async function POST(request: Request) {
       name: name.trim(),
       maxSpellLevel,
       prisms: prisms.filter((p: any) => typeof p === "string" && p.trim().length > 0),
+      playerClass: playerClass?.trim() || undefined,
+      classInfo: classInfo?.trim() || undefined,
     });
 
     console.log("POST /api/players - Player created successfully:", newPlayer.id);
@@ -67,9 +69,9 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { id, name, maxSpellLevel, prisms } = body;
+    const { id, name, maxSpellLevel, prisms, playerClass, classInfo } = body;
     
-    console.log("PUT /api/players - Received update request:", { id, name, maxSpellLevel, prisms });
+    console.log("PUT /api/players - Received update request:", { id, name, maxSpellLevel, prisms, playerClass, classInfo });
 
     if (!id || typeof id !== "string") {
       return NextResponse.json({ error: "Player ID is required" }, { status: 400 });
@@ -94,6 +96,8 @@ export async function PUT(request: Request) {
       name: name?.trim(),
       maxSpellLevel,
       prisms: prisms?.filter((p: any) => typeof p === "string" && p.trim().length > 0),
+      playerClass: playerClass !== undefined ? (playerClass?.trim() || undefined) : undefined,
+      classInfo: classInfo !== undefined ? (classInfo?.trim() || undefined) : undefined,
     });
 
     console.log("PUT /api/players - Player updated:", updatedPlayer);

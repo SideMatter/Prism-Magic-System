@@ -11,6 +11,8 @@ export const list = query({
       name: p.name,
       maxSpellLevel: p.maxSpellLevel,
       prisms: p.prisms,
+      playerClass: p.playerClass,
+      classInfo: p.classInfo,
     }));
   },
 });
@@ -31,6 +33,8 @@ export const getById = query({
       name: player.name,
       maxSpellLevel: player.maxSpellLevel,
       prisms: player.prisms,
+      playerClass: player.playerClass,
+      classInfo: player.classInfo,
     };
   },
 });
@@ -41,9 +45,11 @@ export const create = mutation({
     name: v.string(),
     maxSpellLevel: v.number(),
     prisms: v.array(v.string()),
+    playerClass: v.optional(v.string()),
+    classInfo: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { name, maxSpellLevel, prisms } = args;
+    const { name, maxSpellLevel, prisms, playerClass, classInfo } = args;
 
     if (!name || !name.trim()) {
       throw new Error("Player name is required");
@@ -76,6 +82,8 @@ export const create = mutation({
       name: name.trim(),
       maxSpellLevel,
       prisms: prisms.filter((p) => typeof p === "string" && p.trim().length > 0),
+      playerClass: playerClass?.trim() || undefined,
+      classInfo: classInfo?.trim() || undefined,
     });
 
     return {
@@ -83,6 +91,8 @@ export const create = mutation({
       name: name.trim(),
       maxSpellLevel,
       prisms,
+      playerClass,
+      classInfo,
     };
   },
 });
@@ -94,9 +104,11 @@ export const update = mutation({
     name: v.optional(v.string()),
     maxSpellLevel: v.optional(v.number()),
     prisms: v.optional(v.array(v.string())),
+    playerClass: v.optional(v.string()),
+    classInfo: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { id, name, maxSpellLevel, prisms } = args;
+    const { id, name, maxSpellLevel, prisms, playerClass, classInfo } = args;
 
     const player = await ctx.db
       .query("players")
@@ -111,6 +123,8 @@ export const update = mutation({
       name: string;
       maxSpellLevel: number;
       prisms: string[];
+      playerClass: string | undefined;
+      classInfo: string | undefined;
     }> = {};
 
     if (name !== undefined) {
@@ -143,6 +157,14 @@ export const update = mutation({
       );
     }
 
+    if (playerClass !== undefined) {
+      updates.playerClass = playerClass.trim() || undefined;
+    }
+
+    if (classInfo !== undefined) {
+      updates.classInfo = classInfo.trim() || undefined;
+    }
+
     await ctx.db.patch(player._id, updates);
 
     return {
@@ -150,6 +172,8 @@ export const update = mutation({
       name: updates.name ?? player.name,
       maxSpellLevel: updates.maxSpellLevel ?? player.maxSpellLevel,
       prisms: updates.prisms ?? player.prisms,
+      playerClass: updates.playerClass !== undefined ? updates.playerClass : player.playerClass,
+      classInfo: updates.classInfo !== undefined ? updates.classInfo : player.classInfo,
     };
   },
 });
@@ -181,6 +205,8 @@ export const bulkImport = mutation({
         name: v.string(),
         maxSpellLevel: v.number(),
         prisms: v.array(v.string()),
+        playerClass: v.optional(v.string()),
+        classInfo: v.optional(v.string()),
       })
     ),
   },
@@ -204,6 +230,8 @@ export const bulkImport = mutation({
         name: player.name,
         maxSpellLevel: player.maxSpellLevel,
         prisms: player.prisms,
+        playerClass: player.playerClass,
+        classInfo: player.classInfo,
       });
       imported++;
     }

@@ -3,6 +3,8 @@ export interface Player {
   name: string;
   maxSpellLevel: number; // 0-9 (0 = cantrips only, 9 = all spell levels)
   prisms: string[];
+  playerClass?: string; // Class name (e.g., "Arcanist", "Divine Paladin")
+  classInfo?: string; // Custom class info/notes for the AI to reference
 }
 
 // Get available spell levels for a player (0 = cantrips, 1-9 = spell levels)

@@ -20,6 +20,8 @@ export default defineSchema({
     name: v.string(),
     maxSpellLevel: v.number(),
     prisms: v.array(v.string()),
+    playerClass: v.optional(v.string()), // Class name (e.g., "Arcanist", "Divine Paladin")
+    classInfo: v.optional(v.string()), // Custom class info/notes for the AI to reference
   })
     .index("by_playerId", ["playerId"])
     .index("by_name", ["name"]),

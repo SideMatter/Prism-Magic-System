@@ -34,6 +34,16 @@ interface SpellWithPrism extends Spell {
   isCustom?: boolean;
 }
 
+interface PrismClass {
+  id: string;
+  name: string;
+  prism?: string;
+  type?: string;
+  hitDie: number;
+  description: string;
+  features?: string[];
+}
+
 export default function AdminPage() {
   const { toast } = useToast();
   const [spells, setSpells] = useState<SpellWithPrism[]>([]);
@@ -71,7 +81,10 @@ export default function AdminPage() {
     name: "",
     maxSpellLevel: 0,
     prisms: [] as string[],
+    playerClass: "",
+    classInfo: "",
   });
+  const [availableClasses, setAvailableClasses] = useState<PrismClass[]>([]);
 
   const showStatus = (type: "success" | "error", text: string) => {
     if (statusTimeoutRef.current) {
@@ -99,7 +112,7 @@ export default function AdminPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [spellsRes, prismsRes, playersRes] = await Promise.all([
+      const [spellsRes, prismsRes, playersRes, classesRes] = await Promise.all([
         fetch("/api/spells", {
           cache: 'no-store',
           headers: {
@@ -118,14 +131,22 @@ export default function AdminPage() {
             'Cache-Control': 'no-cache',
           }
         }),
+        fetch("/api/classes", {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache',
+          }
+        }),
       ]);
       const spellsData = await spellsRes.json();
       const prismsData = await prismsRes.json();
       const playersData = await playersRes.json();
+      const classesData = await classesRes.json();
       setSpells(spellsData);
       setFilteredSpells(spellsData);
       setAvailablePrisms(prismsData);
       setPlayers(playersData);
+      setAvailableClasses(classesData);
     } catch (error) {
       console.error("Error loading data:", error);
     } finally {
@@ -421,12 +442,18 @@ export default function AdminPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(playerForm),
+        body: JSON.stringify({
+          name: playerForm.name,
+          maxSpellLevel: playerForm.maxSpellLevel,
+          prisms: playerForm.prisms,
+          playerClass: playerForm.playerClass || undefined,
+          classInfo: playerForm.classInfo || undefined,
+        }),
       });
 
       if (response.ok) {
         await loadData();
-        setPlayerForm({ name: "", maxSpellLevel: 0, prisms: [] });
+        setPlayerForm({ name: "", maxSpellLevel: 0, prisms: [], playerClass: "", classInfo: "" });
         setShowPlayerForm(false);
         showStatus("success", `Player "${playerForm.name}" created successfully!`);
       } else {
@@ -649,6 +676,33 @@ export default function AdminPage() {
                     })}
                   </div>
                 </div>
+                <div className="md:col-span-2">
+                  <label className="text-sm font-medium">Player Class</label>
+                  <select
+                    value={playerForm.playerClass}
+                    onChange={(e) => setPlayerForm({ ...playerForm, playerClass: e.target.value })}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  >
+                    <option value="">Select a class...</option>
+                    {availableClasses.map((cls) => (
+                      <option key={cls.id} value={cls.name}>
+                        {cls.name} ({cls.prism} - {cls.type})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="text-sm font-medium">Class Info / Notes</label>
+                  <p className="text-xs text-muted-foreground mb-1">
+                    Custom info about this player&apos;s class that Paul Bot will reference
+                  </p>
+                  <textarea
+                    className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    value={playerForm.classInfo}
+                    onChange={(e) => setPlayerForm({ ...playerForm, classInfo: e.target.value })}
+                    placeholder="e.g., Level 5 Arcanist specializing in force spells. Has Arcane Recovery feature. Currently focused on battlefield control..."
+                  />
+                </div>
               </div>
               <Button
                 onClick={handleCreatePlayer}
@@ -737,6 +791,30 @@ export default function AdminPage() {
                             })}
                           </div>
                         </div>
+                        <div>
+                          <label className="text-xs font-medium">Class</label>
+                          <select
+                            value={editingPlayer.playerClass || ""}
+                            onChange={(e) => setEditingPlayer(prev => ({ ...prev!, playerClass: e.target.value || undefined }))}
+                            className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                          >
+                            <option value="">No class</option>
+                            {availableClasses.map((cls) => (
+                              <option key={cls.id} value={cls.name}>
+                                {cls.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium">Class Info / Notes</label>
+                          <textarea
+                            className="flex min-h-[60px] w-full rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            value={editingPlayer.classInfo || ""}
+                            onChange={(e) => setEditingPlayer(prev => ({ ...prev!, classInfo: e.target.value || undefined }))}
+                            placeholder="Custom class info for Paul Bot..."
+                          />
+                        </div>
                         <div className="flex gap-2">
                           <Button
                             size="sm"
@@ -758,12 +836,12 @@ export default function AdminPage() {
                     ) : (
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <h4 className="font-semibold">{player.name}</h4>
+                            {player.playerClass && (
+                              <Badge variant="secondary">{player.playerClass}</Badge>
+                            )}
                             <Badge variant="outline">Max Spell Lvl {player.maxSpellLevel}</Badge>
-                            <Badge variant="secondary">
-                              Can cast: {getAvailableSpellLevels(player.maxSpellLevel).join(', ')}
-                            </Badge>
                           </div>
                           <div className="flex flex-wrap gap-1 mt-2">
                             {player.prisms.length > 0 ? (
@@ -776,6 +854,11 @@ export default function AdminPage() {
                               <span className="text-xs text-muted-foreground">No prisms assigned</span>
                             )}
                           </div>
+                          {player.classInfo && (
+                            <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
+                              {player.classInfo}
+                            </p>
+                          )}
                         </div>
                         <div className="flex gap-2 ml-4">
                           <Button
