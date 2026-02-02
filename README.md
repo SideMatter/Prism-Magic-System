@@ -294,6 +294,4 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 - `VERCEL_SETUP.md` - Vercel setup guide
 - `REDIS_SETUP.md` - Legacy Redis setup (now using Convex)
 
----
-
-**Built for the Prism Magic System homebrew for D&D 5e** ✨
+---**Built for the Prism Magic System homebrew for D&D 5e** ✨

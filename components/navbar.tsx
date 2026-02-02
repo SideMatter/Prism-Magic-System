@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Zap, User, Shield, Wrench } from "lucide-react";
+import Image from "next/image";
 import {
   NavigationMenu,
   NavigationMenuItem,
@@ -50,7 +51,7 @@ ListItem.displayName = "ListItem";
 export function Navbar() {
   const pathname = usePathname();
 
-  const isPlayerToolsActive = pathname.startsWith("/spell-combiner");
+  const isPlayerToolsActive = pathname.startsWith("/spell-combiner") || pathname.startsWith("/paul-bot");
   const isDMActive = pathname === "/npc" || pathname === "/admin";
 
   return (
@@ -98,6 +99,14 @@ export function Navbar() {
                     active={pathname === "/spell-combiner"}
                   >
                     Combine spells to create powerful magic
+                  </ListItem>
+                  <ListItem
+                    href="/paul-bot"
+                    title="Paul Bot"
+                    icon={<Image src="/paul-bot.png?v=2" alt="Paul Bot" width={16} height={16} className="rounded-full" />}
+                    active={pathname === "/paul-bot"}
+                  >
+                    AI assistant for spells and abilities
                   </ListItem>
                 </ul>
               </NavigationMenuContent>
