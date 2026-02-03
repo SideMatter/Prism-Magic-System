@@ -158,14 +158,24 @@ export const update = mutation({
     }
 
     if (playerClass !== undefined) {
-      updates.playerClass = playerClass.trim() || undefined;
+      const trimmed = typeof playerClass === "string" ? playerClass.trim() : "";
+      // Store trimmed value (use "" for "no class" - Convex patch fails on undefined)
+      updates.playerClass = trimmed;
     }
 
     if (classInfo !== undefined) {
-      updates.classInfo = classInfo.trim() || undefined;
+      const trimmed = typeof classInfo === "string" ? classInfo.trim() : "";
+      updates.classInfo = trimmed;
     }
 
-    await ctx.db.patch(player._id, updates);
+    // Filter out undefined - Convex patch can fail with undefined values
+    const updatesToApply = Object.fromEntries(
+      Object.entries(updates).filter(([_, v]) => v !== undefined)
+    );
+
+    if (Object.keys(updatesToApply).length > 0) {
+      await ctx.db.patch(player._id, updatesToApply);
+    }
 
     return {
       id: player.playerId,

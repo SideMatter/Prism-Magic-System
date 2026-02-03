@@ -91,27 +91,31 @@ export async function PUT(request: Request) {
     }
 
     const convex = getConvexClient();
-    const updatedPlayer = await convex.mutation(api.players.update, {
-      id,
-      name: name?.trim(),
-      maxSpellLevel,
-      prisms: prisms?.filter((p: any) => typeof p === "string" && p.trim().length > 0),
-      playerClass: playerClass !== undefined ? (playerClass?.trim() || undefined) : undefined,
-      classInfo: classInfo !== undefined ? (classInfo?.trim() || undefined) : undefined,
-    });
+    const mutationArgs: Record<string, unknown> = { id };
+    if (name !== undefined) mutationArgs.name = name.trim();
+    if (maxSpellLevel !== undefined) mutationArgs.maxSpellLevel = maxSpellLevel;
+    if (prisms !== undefined) mutationArgs.prisms = prisms.filter((p: any) => typeof p === "string" && p.trim().length > 0);
+    if (playerClass !== undefined) mutationArgs.playerClass = typeof playerClass === "string" ? playerClass.trim() : "";
+    if (classInfo !== undefined) mutationArgs.classInfo = typeof classInfo === "string" ? classInfo.trim() : "";
+
+    const updatedPlayer = await convex.mutation(api.players.update, mutationArgs as any);
 
     console.log("PUT /api/players - Player updated:", updatedPlayer);
     return NextResponse.json(updatedPlayer);
   } catch (error: any) {
     console.error("Error updating player:", error);
     const message = error?.message || "Failed to update player";
+    const details = error?.data || error?.cause?.message || "";
     if (message.includes("not found")) {
       return NextResponse.json({ error: "Player not found" }, { status: 404 });
     }
     if (message.includes("already exists")) {
       return NextResponse.json({ error: "A player with this name already exists" }, { status: 400 });
     }
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json(
+      { error: message, details: details || undefined },
+      { status: 500 }
+    );
   }
 }
 
