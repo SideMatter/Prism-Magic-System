@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Zap, User, Shield, Wrench } from "lucide-react";
+import { Home, Zap, User, Shield, Wrench, Sparkles } from "lucide-react";
 import Image from "next/image";
 import {
   NavigationMenu,
@@ -52,7 +52,7 @@ export function Navbar() {
   const pathname = usePathname();
 
   const isPlayerToolsActive = pathname.startsWith("/spell-combiner") || pathname.startsWith("/paul-bot");
-  const isDMActive = pathname === "/npc" || pathname === "/admin";
+  const isDMActive = pathname === "/npc" || pathname === "/admin" || pathname.startsWith("/spell-forge");
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -140,6 +140,14 @@ export function Navbar() {
                     active={pathname === "/npc"}
                   >
                     Generate NPCs with prism classes
+                  </ListItem>
+                  <ListItem
+                    href="/spell-forge"
+                    title="Spell Forge"
+                    icon={<Sparkles className="w-4 h-4" />}
+                    active={pathname.startsWith("/spell-forge")}
+                  >
+                    AI-guided custom spell creator
                   </ListItem>
                 </ul>
               </NavigationMenuContent>
