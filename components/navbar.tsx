@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Zap, User, Shield, Wrench, Sparkles } from "lucide-react";
+import { Home, User, Shield, Wrench, Sparkles } from "lucide-react";
 import Image from "next/image";
 import {
   NavigationMenu,
@@ -51,7 +51,7 @@ ListItem.displayName = "ListItem";
 export function Navbar() {
   const pathname = usePathname();
 
-  const isPlayerToolsActive = pathname.startsWith("/spell-combiner") || pathname.startsWith("/paul-bot");
+  const isPlayerToolsActive = pathname.startsWith("/paul-bot");
   const isDMActive = pathname === "/npc" || pathname === "/admin" || pathname.startsWith("/spell-forge");
 
   return (
@@ -65,8 +65,9 @@ export function Navbar() {
           <NavigationMenuList>
             {/* Spells */}
             <NavigationMenuItem>
-              <Link href="/" legacyBehavior passHref>
-                <NavigationMenuLink
+              <NavigationMenuLink asChild>
+                <Link
+                  href="/"
                   className={cn(
                     navigationMenuTriggerStyle(),
                     "gap-2",
@@ -75,8 +76,8 @@ export function Navbar() {
                 >
                   <Home className="w-4 h-4" />
                   <span className="hidden sm:inline">Spells</span>
-                </NavigationMenuLink>
-              </Link>
+                </Link>
+              </NavigationMenuLink>
             </NavigationMenuItem>
 
             {/* Player Tools */}
@@ -92,14 +93,6 @@ export function Navbar() {
               </NavigationMenuTrigger>
               <NavigationMenuContent className="right-0 left-auto">
                 <ul className="grid w-[250px] gap-1 p-2">
-                  <ListItem
-                    href="/spell-combiner"
-                    title="Spell Combiner"
-                    icon={<Zap className="w-4 h-4" />}
-                    active={pathname === "/spell-combiner"}
-                  >
-                    Combine spells to create powerful magic
-                  </ListItem>
                   <ListItem
                     href="/paul-bot"
                     title="Paul Bot"

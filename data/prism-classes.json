@@ -89,7 +89,7 @@
       "statPriority": ["intelligence", "constitution", "dexterity", "wisdom", "charisma", "strength"],
       "description": "A scholarly spellcaster manipulating the fundamental forces of magic",
       "spellList": "Arcane (120 spells)",
-      "features": ["Arcane Recovery (+level/2 Strain per short rest)", "Resonance: +1d6 force/illusion in ley lines"]
+      "features": ["Arcane Recovery (recover spell slots on short rest)", "Resonance: +1d6 force/illusion in ley lines"]
     },
     {
       "id": "arcane-spellblade",
@@ -274,20 +274,6 @@
       "features": ["Extra Attack at Lvl 5", "Gravity Charge", "Astral Smite"]
     }
   ],
-  "customClasses": [],
-  "strainSystem": {
-    "enabled": true,
-    "description": "Magic costs Strain (1 per spell, regardless of level). Max Strain = CON mod + level.",
-    "tiers": {
-      "unlimited": "Cantrips, 1st-3rd level spells (at-will)",
-      "onceTurn": "4th-6th level spells (once per turn)",
-      "onceRest": "7th-9th level spells (once per long rest)",
-      "rituals": "Any ritual spell (10 min, 0 Strain)"
-    },
-    "recovery": {
-      "shortRest": "Half max Strain (rounded down)",
-      "longRest": "Full Strain recovery"
-    }
-  }
+  "customClasses": []
 }
 

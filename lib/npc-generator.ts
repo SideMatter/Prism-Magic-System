@@ -33,7 +33,6 @@ export interface NPC {
   currentHP: number;
   ac: number;
   dc: number;
-  maxStrain: number;
   createdAt: string;
 }
 
@@ -116,11 +115,6 @@ export function calculateBaseAC(dexterityMod: number): number {
   return 10 + dexterityMod;
 }
 
-// Calculate max Strain (Prism of Magic system)
-export function calculateMaxStrain(constitutionMod: number, level: number): number {
-  return constitutionMod + level;
-}
-
 // Calculate spell DC (8 + proficiency bonus + primary ability modifier)
 export function calculateDC(level: number, primaryAbilityMod: number): number {
   const proficiencyBonus = Math.ceil(level / 4) + 1; // 2 at lvl 1-4, 3 at 5-8, etc.
@@ -170,7 +164,6 @@ export function generateNPC(
     currentHP: maxHP, // Start at full health
     ac: calculateBaseAC(dexterityMod),
     dc: calculateDC(level, primaryAbilityMod),
-    maxStrain: calculateMaxStrain(constitutionMod, level),
     createdAt: new Date().toISOString(),
   };
 }

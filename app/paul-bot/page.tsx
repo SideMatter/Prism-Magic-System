@@ -302,7 +302,7 @@ export default function PaulBotPage() {
                           <li>&quot;What are my best damage spells?&quot;</li>
                           <li>&quot;How does Fireball work?&quot;</li>
                           <li>&quot;What spells should I prepare?&quot;</li>
-                          <li>&quot;Explain the Strain system&quot;</li>
+                          <li>&quot;How do spell slots work?&quot;</li>
                         </ul>
                       </div>
                     </CardContent>

@@ -36,14 +36,6 @@ Spells belong to one (or more) of 7 prisms:
 
 Spells can belong to multiple prisms when thematically appropriate (e.g. a void spell could be SHADOW + ARCANE).
 
-## Strain Cost (use for level balance guidance)
-- Cantrip (0): 0 Strain — minor, at-will effects
-- 1st–2nd level: 1 Strain — reliable, meaningful combat/utility
-- 3rd–4th level: 2 Strain — powerful, often encounter-defining
-- 5th–6th level: 4 Strain — major, dramatic effects
-- 7th level: 7 Strain — near-legendary power
-- 8th–9th level: 10–14 Strain — world-shaking effects
-
 ## D&D 5e Design Standards
 - Schools: Abjuration, Conjuration, Divination, Enchantment, Evocation, Illusion, Necromancy, Transmutation
 - Casting Times: "1 action", "1 bonus action", "1 reaction, which you take when [trigger]", "1 minute", "10 minutes", "1 hour"

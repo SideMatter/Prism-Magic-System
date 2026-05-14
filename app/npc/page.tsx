@@ -796,8 +796,8 @@ export default function NPCGeneratorPage() {
                                   })}
                                 </div>
 
-                                {/* Editable HP, AC, DC, Strain */}
-                                <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-4">
+                                {/* Editable HP, AC, DC */}
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
                                   <div className="space-y-1">
                                     <label className="text-xs font-medium">Current HP</label>
                                     <Input
@@ -847,19 +847,6 @@ export default function NPCGeneratorPage() {
                                       onChange={(e) => setEditedStats({
                                         ...editedStats,
                                         dc: parseInt(e.target.value) || 1
-                                      })}
-                                      className="h-8 text-center"
-                                    />
-                                  </div>
-                                  <div className="space-y-1">
-                                    <label className="text-xs font-medium">Max Strain</label>
-                                    <Input
-                                      type="number"
-                                      min={1}
-                                      value={editedStats.maxStrain ?? npc.maxStrain}
-                                      onChange={(e) => setEditedStats({
-                                        ...editedStats,
-                                        maxStrain: parseInt(e.target.value) || 1
                                       })}
                                       className="h-8 text-center"
                                     />
@@ -930,9 +917,6 @@ export default function NPCGeneratorPage() {
                                       <Badge variant="secondary">{npc.class.type}</Badge>
                                     )}
                                     <Badge>Hit Die: d{npc.class.hitDie}</Badge>
-                                    <Badge variant="outline">
-                                      Max Strain: {npc.maxStrain}
-                                    </Badge>
                                   </div>
                                   <div className="text-xs text-muted-foreground">
                                     <strong>Saves:</strong> {npc.class.savingThrows.map(s => statLabels[s as StatName]).join(', ')}

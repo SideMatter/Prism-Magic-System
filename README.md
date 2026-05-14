@@ -1,6 +1,6 @@
 # Prism Magic System
 
-A comprehensive web application for managing and exploring D&D 5e spells within the Prism Magic System homebrew. Features real-time spell data, multi-prism support, player management, strain tracking, and powerful filtering capabilities.
+A comprehensive web application for managing and exploring D&D 5e spells within the Prism Magic System homebrew. Features real-time spell data, multi-prism support, player management, and powerful filtering capabilities.
 
 ## ✨ Features
 
@@ -18,11 +18,6 @@ A comprehensive web application for managing and exploring D&D 5e spells within 
 ### Player Management
 - 👥 **Player Profiles**: Track players with their accessible prisms and max spell level
 - 🎲 **Quick Filters**: One-click filtering to show only spells accessible to a specific player
-- 📊 **Strain Meter**: Track spellcasting strain with persistent storage
-  - Permanent strain tracking
-  - Temporary strain (consumes before permanent)
-  - Long rest reset functionality
-  - Strain cost calculation based on spell level
 
 ### Admin Panel (`/admin`)
 - 🛠️ **Spell-Prism Mapping**: Assign spells to one or multiple prisms
@@ -30,11 +25,6 @@ A comprehensive web application for managing and exploring D&D 5e spells within 
 - 👤 **Player Management**: Add, edit, and remove players
 - 🎨 **Prism Management**: Add or remove prism types
 - 📚 **Custom Classes**: Manage custom character classes
-
-### Spell Combiner (`/spell-combiner`)
-- 🔮 **Spell Combination Calculator**: Combine multiple spells to calculate total damage and strain cost
-- 📊 **Damage Breakdown**: See individual spell contributions
-- 🎯 **Player-Specific Filtering**: Filter spells by player's accessible prisms
 
 ### NPC Generator (`/npc`)
 - 🎲 **Random NPC Generation**: Generate NPCs with custom Prism Magic classes
@@ -130,14 +120,7 @@ npm run dev
 3. **Filter by Level**: Select spell levels (0-9) to narrow results
 4. **Filter by Components**: Select V (Verbal), S (Somatic), or M (Material) requirements
 5. **Filter by Player**: Click a player name to show only their accessible spells
-6. **View Spell Details**: Click any spell card to see full details, strain cost, and prism assignment
-
-### Managing Strain
-
-- **Cast a Spell**: Click "Cast Spell" on any spell detail page to add strain
-- **Adjust Strain**: Use +/- buttons or type directly in the strain meter
-- **Temporary Strain**: Add temporary strain that consumes before permanent strain
-- **Long Rest**: Click the flame icon to reset all strain to 0
+6. **View Spell Details**: Click any spell card to see full details and prism assignment
 
 ### Admin Panel
 
@@ -147,14 +130,6 @@ Navigate to `/admin` to:
 - **Manage Players**: Add players with their accessible prisms and max spell level
 - **Manage Prisms**: Add or remove prism types from the system
 - **Manage Classes**: Create and edit custom character classes
-
-### Spell Combiner
-
-Navigate to `/spell-combiner` to:
-- Search and select multiple spells
-- Calculate combined damage output
-- See total strain cost
-- Filter by player's accessible spells
 
 ### NPC Generator
 
@@ -172,7 +147,6 @@ Prism-Magic-System/
 │   ├── admin/             # Admin panel page
 │   ├── api/               # API routes
 │   ├── npc/               # NPC generator page
-│   ├── spell-combiner/    # Spell combiner page
 │   └── page.tsx           # Main spell search page
 ├── components/            # React components
 │   ├── ui/                # Reusable UI components

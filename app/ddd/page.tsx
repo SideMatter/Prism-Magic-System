@@ -175,7 +175,7 @@ export default function DDD() {
                   </a>
                 </p>
                 <p>
-                  <a href="/spell-combiner" style={{ color: "#00FF00", textDecoration: "underline" }}>
+                  <a href="/" style={{ color: "#00FF00", textDecoration: "underline" }}>
                     ✨ Spells
                   </a>
                 </p>

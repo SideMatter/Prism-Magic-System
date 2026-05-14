@@ -126,15 +126,7 @@ The Prism Magic System is a homebrew for D&D 5e that organizes spells into 7 the
 
 Some spells belong to multiple prisms (like Misty Step being both FEY and ARCANE). Players can only cast spells from prisms they have access to.
 
-## Strain System
-In this system, casting spells costs Strain based on spell level:
-- Cantrips: 0 Strain
-- 1st-2nd level: 1 Strain
-- 3rd-4th level: 2 Strain
-- 5th-6th level: 4 Strain
-- 7th level: 7 Strain
-- 8th level: 10 Strain
-- 9th level: 14 Strain
+Spellcasting uses standard D&D 5e spell slots.
 
 ## ${player.name}'s Accessible Spells (${accessibleSpells.length} total)
 ${spellSummary}
