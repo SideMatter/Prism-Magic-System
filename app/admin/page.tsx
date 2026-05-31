@@ -54,6 +54,8 @@ export default function AdminPage() {
   const [selectedPrisms, setSelectedPrisms] = useState<string[]>([]);
   const [availablePrisms, setAvailablePrisms] = useState<string[]>([]);
   const [newPrism, setNewPrism] = useState("");
+  const [renamingPrism, setRenamingPrism] = useState<string | null>(null);
+  const [renamePrismValue, setRenamePrismValue] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showCustomSpellForm, setShowCustomSpellForm] = useState(false);
@@ -347,6 +349,42 @@ export default function AdminPage() {
     }
   };
 
+  const handleRenamePrism = async (oldName: string) => {
+    const newName = renamePrismValue.trim();
+    if (!newName) {
+      showStatus("error", "Please enter a new prism name.");
+      return;
+    }
+    if (newName === oldName) {
+      setRenamingPrism(null);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch("/api/prisms", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ oldName, newName }),
+      });
+
+      if (response.ok) {
+        await loadData();
+        setRenamingPrism(null);
+        setRenamePrismValue("");
+        showStatus("success", `Prism "${oldName}" renamed to "${newName}" successfully!`);
+      } else {
+        const error = await response.json().catch(() => ({ error: "Unknown error" }));
+        showStatus("error", `Failed to rename prism: ${error.error || "Unknown error"}`);
+      }
+    } catch (error) {
+      console.error("Error renaming prism:", error);
+      showStatus("error", "Error renaming prism. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleCreateCustomSpell = async () => {
     if (!customSpellForm.name.trim() || !customSpellForm.school.trim() || 
         !customSpellForm.casting_time.trim() || !customSpellForm.range.trim() ||
@@ -570,17 +608,59 @@ export default function AdminPage() {
             <div className="flex flex-wrap gap-2">
               {availablePrisms.map((prism) => (
                 <div key={prism} className="flex items-center gap-1">
-                  <Badge variant="outline" className="pr-1">
-                    {prism}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-auto p-1 ml-1 hover:bg-destructive hover:text-destructive-foreground"
-                      onClick={() => handleRemovePrism(prism)}
-                    >
-                      <X className="w-3 h-3" />
-                    </Button>
-                  </Badge>
+                  {renamingPrism === prism ? (
+                    <div className="flex items-center gap-1">
+                      <Input
+                        value={renamePrismValue}
+                        onChange={(e) => setRenamePrismValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleRenamePrism(prism);
+                          if (e.key === "Escape") setRenamingPrism(null);
+                        }}
+                        className="h-7 w-40 text-sm"
+                        autoFocus
+                      />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0"
+                        onClick={() => handleRenamePrism(prism)}
+                      >
+                        <Save className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0"
+                        onClick={() => setRenamingPrism(null)}
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <Badge variant="outline" className="pr-1">
+                      {prism}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-auto p-1 ml-1 hover:bg-accent"
+                        onClick={() => {
+                          setRenamingPrism(prism);
+                          setRenamePrismValue(prism);
+                        }}
+                      >
+                        <Edit2 className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-auto p-1 hover:bg-destructive hover:text-destructive-foreground"
+                        onClick={() => handleRemovePrism(prism)}
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </Badge>
+                  )}
                 </div>
               ))}
             </div>

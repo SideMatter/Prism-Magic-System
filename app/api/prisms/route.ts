@@ -45,6 +45,28 @@ export async function POST(request: Request) {
   }
 }
 
+export async function PUT(request: Request) {
+  try {
+    const { oldName, newName } = await request.json();
+
+    if (!oldName || !newName?.trim()) {
+      return NextResponse.json({ error: "Both old and new prism names are required" }, { status: 400 });
+    }
+
+    const convex = getConvexClient();
+    await convex.mutation(api.prisms.rename, { oldName, newName: newName.trim() });
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error("Error renaming prism:", error);
+    const message = error?.message || "Failed to rename prism";
+    if (message.includes("already exists")) {
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
 export async function DELETE(request: Request) {
   try {
     const { name } = await request.json();
