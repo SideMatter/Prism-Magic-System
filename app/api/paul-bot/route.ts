@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+const openrouter = new OpenAI({
+  baseURL: "https://openrouter.ai/api/v1",
+  apiKey: process.env.OPENROUTER_API_KEY,
 });
 
 interface Player {
@@ -202,8 +203,7 @@ export async function POST(request: NextRequest) {
     // Build system prompt with full context
     const systemPrompt = buildSystemPrompt(player, accessibleSpells, playerClassInfo);
 
-    // Prepare messages for OpenAI
-    const openaiMessages: OpenAI.ChatCompletionMessageParam[] = [
+    const chatMessages: OpenAI.ChatCompletionMessageParam[] = [
       { role: "system", content: systemPrompt },
       ...messages.map((m) => ({
         role: m.role as "user" | "assistant",
@@ -211,12 +211,11 @@ export async function POST(request: NextRequest) {
       })),
     ];
 
-    // Call OpenAI GPT-5.2
-    const completion = await openai.chat.completions.create({
-      model: "gpt-5.2",
-      messages: openaiMessages,
+    const completion = await openrouter.chat.completions.create({
+      model: "moonshotai/kimi-k2",
+      messages: chatMessages,
       temperature: 0.7,
-      max_completion_tokens: 2000,
+      max_tokens: 2000,
     });
 
     const assistantMessage = completion.choices[0]?.message?.content || "";
@@ -232,7 +231,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error: isAuthError
-          ? "Invalid OpenAI API key. Check OPENAI_API_KEY in .env.local"
+          ? "Invalid OpenRouter API key. Check OPENROUTER_API_KEY in .env.local"
           : `Failed to get response: ${message}`,
       },
       { status: 500 }
