@@ -146,6 +146,61 @@ export function usePlayers() {
   };
 }
 
+// Hook for demerit scoreboard
+export interface DemeritScore {
+  playerName: string;
+  playerId: string;
+  count: number;
+}
+
+export function useDemerits() {
+  const [mounted, setMounted] = useState(false);
+  const [scores, setScores] = useState<DemeritScore[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const refresh = async () => {
+    try {
+      const response = await fetch("/api/demerits");
+      if (!response.ok) throw new Error("Failed to fetch demerits");
+      const data = await response.json();
+      setScores(data as DemeritScore[]);
+      setIsLoading(false);
+    } catch (error) {
+      console.error("Error fetching demerits:", error);
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!mounted) return;
+    let cancelled = false;
+
+    async function fetchDemerits() {
+      try {
+        const response = await fetch("/api/demerits");
+        if (!response.ok) throw new Error("Failed to fetch demerits");
+        const data = await response.json();
+        if (!cancelled) {
+          setScores(data as DemeritScore[]);
+          setIsLoading(false);
+        }
+      } catch (error) {
+        console.error("Error fetching demerits:", error);
+        if (!cancelled) setIsLoading(false);
+      }
+    }
+
+    fetchDemerits();
+    return () => { cancelled = true; };
+  }, [mounted]);
+
+  return { scores, isLoading: !mounted || isLoading, refresh };
+}
+
 // Hook for getting just prisms (lighter weight)
 export function usePrisms() {
   const [mounted, setMounted] = useState(false);

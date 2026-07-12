@@ -154,53 +154,15 @@ export default function Home() {
     return filtered;
   }, [spells, selectedPrisms, includeNoPrism, selectedLevels, selectedComponents]);
 
-  // Memoized command filtered spells
+  // Memoized command filtered spells - always searches from root (all spells)
   const commandFilteredSpells = useMemo(() => {
-    let filtered = spells;
+    if (!commandSearchQuery.trim()) return spells;
 
-    if (commandSearchQuery.trim()) {
-      const query = commandSearchQuery.toLowerCase();
-      filtered = filtered.filter((spell) =>
-        spell.name.toLowerCase().includes(query)
-      );
-    }
-
-    if (selectedPrisms.length > 0 || includeNoPrism) {
-      filtered = filtered.filter((spell) => {
-        const hasPrism = !!spell.prism;
-
-        if (!hasPrism) {
-          return includeNoPrism;
-        }
-
-        const spellPrisms = (Array.isArray(spell.prism)
-          ? spell.prism
-          : [spell.prism]
-        ).filter((p): p is string => typeof p === "string" && p.length > 0);
-
-        const matchesPrism = spellPrisms.some((prism) =>
-          selectedPrisms.includes(prism)
-        );
-
-        return matchesPrism;
-      });
-    }
-
-    if (selectedLevels.length > 0) {
-      filtered = filtered.filter((spell) =>
-        selectedLevels.includes(spell.level)
-      );
-    }
-
-    if (selectedComponents.length > 0) {
-      filtered = filtered.filter((spell) => {
-        const spellComponents = parseComponentTypes(spell.components);
-        return selectedComponents.every((comp) => spellComponents.includes(comp));
-      });
-    }
-
-    return filtered;
-  }, [spells, commandSearchQuery, selectedPrisms, includeNoPrism, selectedLevels, selectedComponents]);
+    const query = commandSearchQuery.toLowerCase();
+    return spells.filter((spell) =>
+      spell.name.toLowerCase().includes(query)
+    );
+  }, [spells, commandSearchQuery]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -426,6 +388,7 @@ export default function Home() {
               </p>
             </CardContent>
           </Card>
+
         </aside>
 
         {/* Main Content Area - Spells */}

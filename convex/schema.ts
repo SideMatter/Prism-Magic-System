@@ -68,6 +68,16 @@ export default defineSchema({
     description: v.string(),
   }).index("by_name", ["name"]),
 
+  // Demerits table - tracks player demerits from the DM
+  demerits: defineTable({
+    playerId: v.string(),
+    playerName: v.string(),
+    reason: v.optional(v.string()),
+    timestamp: v.number(),
+  })
+    .index("by_playerId", ["playerId"])
+    .index("by_playerName", ["playerName"]),
+
   // Cache metadata - stores timestamps for cache invalidation
   cacheMetadata: defineTable({
     key: v.string(),

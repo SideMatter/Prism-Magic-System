@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, User, Shield, Wrench, Sparkles } from "lucide-react";
+import { Home, User, Shield, Wrench, Sparkles, AlertTriangle } from "lucide-react";
 import Image from "next/image";
 import {
   NavigationMenu,
@@ -51,7 +51,7 @@ ListItem.displayName = "ListItem";
 export function Navbar() {
   const pathname = usePathname();
 
-  const isPlayerToolsActive = pathname.startsWith("/paul-bot");
+  const isPlayerToolsActive = pathname.startsWith("/paul-bot") || pathname === "/demerits";
   const isDMActive = pathname === "/npc" || pathname === "/admin" || pathname.startsWith("/spell-forge");
 
   return (
@@ -100,6 +100,14 @@ export function Navbar() {
                     active={pathname === "/paul-bot"}
                   >
                     AI assistant for spells and abilities
+                  </ListItem>
+                  <ListItem
+                    href="/demerits"
+                    title="Demerit Board"
+                    icon={<AlertTriangle className="w-4 h-4 text-yellow-500" />}
+                    active={pathname === "/demerits"}
+                  >
+                    Who&apos;s been the most distracted?
                   </ListItem>
                 </ul>
               </NavigationMenuContent>

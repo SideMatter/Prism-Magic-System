@@ -11,6 +11,7 @@
 import type * as cachedSpells from "../cachedSpells.js";
 import type * as customClasses from "../customClasses.js";
 import type * as customSpells from "../customSpells.js";
+import type * as demerits from "../demerits.js";
 import type * as players from "../players.js";
 import type * as prisms from "../prisms.js";
 import type * as spellMappings from "../spellMappings.js";
@@ -26,6 +27,7 @@ declare const fullApi: ApiFromModules<{
   cachedSpells: typeof cachedSpells;
   customClasses: typeof customClasses;
   customSpells: typeof customSpells;
+  demerits: typeof demerits;
   players: typeof players;
   prisms: typeof prisms;
   spellMappings: typeof spellMappings;

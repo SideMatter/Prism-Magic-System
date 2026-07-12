@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Save, Search, X, Plus, Trash2, Edit2, User, ArrowUp, ArrowDown } from "lucide-react";
+import { Save, Search, X, Plus, Trash2, Edit2, User, ArrowUp, ArrowDown, AlertTriangle, Trophy } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -88,6 +88,26 @@ export default function AdminPage() {
   });
   const [availableClasses, setAvailableClasses] = useState<PrismClass[]>([]);
 
+  // Demerit state
+  interface DemeritEntry {
+    _id: string;
+    playerId: string;
+    playerName: string;
+    reason?: string;
+    timestamp: number;
+  }
+  interface DemeritScore {
+    playerName: string;
+    playerId: string;
+    count: number;
+  }
+  const [demeritScores, setDemeritScores] = useState<DemeritScore[]>([]);
+  const [allDemerits, setAllDemerits] = useState<DemeritEntry[]>([]);
+  const [demeritReason, setDemeritReason] = useState("");
+  const [editingDemeritId, setEditingDemeritId] = useState<string | null>(null);
+  const [editDemeritReason, setEditDemeritReason] = useState("");
+  const [expandedDemeritPlayer, setExpandedDemeritPlayer] = useState<string | null>(null);
+
   const showStatus = (type: "success" | "error", text: string) => {
     if (statusTimeoutRef.current) {
       clearTimeout(statusTimeoutRef.current);
@@ -114,41 +134,27 @@ export default function AdminPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [spellsRes, prismsRes, playersRes, classesRes] = await Promise.all([
-        fetch("/api/spells", {
-          cache: 'no-store',
-          headers: {
-            'Cache-Control': 'no-cache',
-          }
-        }),
-        fetch("/api/prisms", {
-          cache: 'no-store',
-          headers: {
-            'Cache-Control': 'no-cache',
-          }
-        }),
-        fetch("/api/players", {
-          cache: 'no-store',
-          headers: {
-            'Cache-Control': 'no-cache',
-          }
-        }),
-        fetch("/api/classes", {
-          cache: 'no-store',
-          headers: {
-            'Cache-Control': 'no-cache',
-          }
-        }),
+      const [spellsRes, prismsRes, playersRes, classesRes, scoresRes, allDemeritsRes] = await Promise.all([
+        fetch("/api/spells", { cache: 'no-store', headers: { 'Cache-Control': 'no-cache' } }),
+        fetch("/api/prisms", { cache: 'no-store', headers: { 'Cache-Control': 'no-cache' } }),
+        fetch("/api/players", { cache: 'no-store', headers: { 'Cache-Control': 'no-cache' } }),
+        fetch("/api/classes", { cache: 'no-store', headers: { 'Cache-Control': 'no-cache' } }),
+        fetch("/api/demerits", { cache: 'no-store', headers: { 'Cache-Control': 'no-cache' } }),
+        fetch("/api/demerits?mode=all", { cache: 'no-store', headers: { 'Cache-Control': 'no-cache' } }),
       ]);
       const spellsData = await spellsRes.json();
       const prismsData = await prismsRes.json();
       const playersData = await playersRes.json();
       const classesData = await classesRes.json();
+      const scoresData = scoresRes.ok ? await scoresRes.json() : [];
+      const allDemeritsData = allDemeritsRes.ok ? await allDemeritsRes.json() : [];
       setSpells(spellsData);
       setFilteredSpells(spellsData);
       setAvailablePrisms(prismsData);
       setPlayers(playersData);
       setAvailableClasses(classesData);
+      setDemeritScores(scoresData);
+      setAllDemerits(allDemeritsData);
     } catch (error) {
       console.error("Error loading data:", error);
     } finally {
@@ -532,6 +538,67 @@ export default function AdminPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Demerit handlers
+  const distractionTitles = [
+    "The Most Distracted", "Chief Daydreamer", "Lord of the Wandering Mind",
+    "The Attention Nomad", "Supreme Scatterbrain", "Grand Master of Tangents",
+    "The Unfocused One", "Duke of Distraction", "Captain Side-Quest",
+    "The Perpetual Zoner", "Archmage of Absent-Mindedness", "The Squirrel Whisperer",
+    "Baron of Brain Fog", "The Phone Checker", "Knight of the Short Attention Span",
+    "Sovereign of Spacing Out", "The Tab Hoarder", "Vizier of Vacant Stares",
+    "The Wandering Eye", "Champion of 'Wait, What?'",
+  ];
+  const getDistractionTitle = (name: string) => {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) { hash = ((hash << 5) - hash) + name.charCodeAt(i); hash |= 0; }
+    return distractionTitles[Math.abs(hash) % distractionTitles.length];
+  };
+  const getPlayerDemerits = (playerId: string) =>
+    allDemerits.filter(d => d.playerId === playerId).sort((a, b) => b.timestamp - a.timestamp);
+
+  const handleAddDemerit = async (player: Player) => {
+    try {
+      const res = await fetch("/api/demerits", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ playerId: player.id, playerName: player.name, reason: demeritReason || undefined }),
+      });
+      if (res.ok) { setDemeritReason(""); await loadData(); showStatus("success", `Demerit added to ${player.name}!`); }
+      else showStatus("error", "Failed to add demerit.");
+    } catch { showStatus("error", "Error adding demerit."); }
+  };
+
+  const handleUpdateDemerit = async (id: string) => {
+    try {
+      const res = await fetch("/api/demerits", {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, reason: editDemeritReason }),
+      });
+      if (res.ok) { setEditingDemeritId(null); setEditDemeritReason(""); await loadData(); }
+    } catch { showStatus("error", "Error updating demerit."); }
+  };
+
+  const handleDeleteDemerit = async (id: string) => {
+    try {
+      const res = await fetch("/api/demerits", {
+        method: "DELETE", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      if (res.ok) await loadData();
+    } catch { showStatus("error", "Error deleting demerit."); }
+  };
+
+  const handleClearDemerits = async () => {
+    if (!confirm("Clear ALL demerits for everyone? This cannot be undone.")) return;
+    try {
+      const res = await fetch("/api/demerits", {
+        method: "DELETE", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "clear-all" }),
+      });
+      if (res.ok) { await loadData(); showStatus("success", "All demerits cleared!"); }
+      else showStatus("error", "Failed to clear demerits.");
+    } catch { showStatus("error", "Error clearing demerits."); }
   };
 
   const handleDeletePlayer = async (id: string, name: string) => {
@@ -963,6 +1030,140 @@ export default function AdminPage() {
               </div>
             </CardContent>
           )}
+        </Card>
+
+        {/* Demerit Management */}
+        <Card className="mb-8">
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5 text-yellow-500" />
+                  Demerit Board
+                </CardTitle>
+                <CardDescription>Track player demerits - who&apos;s been naughty?</CardDescription>
+              </div>
+              {demeritScores.length > 0 && (
+                <Button variant="destructive" size="sm" onClick={handleClearDemerits}>
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Clear All
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {players.length > 0 && (
+              <div className="space-y-3">
+                <div>
+                  <label className="text-sm font-medium">Reason (optional)</label>
+                  <Input
+                    value={demeritReason}
+                    onChange={(e) => setDemeritReason(e.target.value)}
+                    placeholder="e.g., Checked phone mid-combat"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {players.map((player) => (
+                    <Button key={player.id} variant="outline" size="sm" onClick={() => handleAddDemerit(player)} className="gap-1.5">
+                      <Plus className="w-3 h-3" />
+                      {player.name}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {demeritScores.length > 0 ? (
+              <div className="space-y-2 pt-2 border-t">
+                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Scoreboard</h4>
+                {demeritScores.map((score, index) => {
+                  const isTop = index === 0;
+                  const isExpanded = expandedDemeritPlayer === score.playerId;
+                  const playerDemerits = getPlayerDemerits(score.playerId);
+                  return (
+                    <div key={score.playerId}>
+                      <div
+                        className={`flex items-center justify-between gap-3 p-3 rounded-lg cursor-pointer ${
+                          isTop ? "bg-yellow-500/10 border-2 border-yellow-500/30" : "bg-muted/50"
+                        }`}
+                        onClick={() => setExpandedDemeritPlayer(isExpanded ? null : score.playerId)}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span className="text-lg font-bold text-muted-foreground w-6 text-center">{index + 1}</span>
+                          {isTop && <Trophy className="w-5 h-5 text-yellow-500 shrink-0" />}
+                          <div className="min-w-0">
+                            <p className={`font-semibold ${isTop ? "text-yellow-600 dark:text-yellow-400" : ""}`}>{score.playerName}</p>
+                            {isTop && (
+                              <p className="text-xs text-yellow-600/80 dark:text-yellow-400/80 italic">{getDistractionTitle(score.playerName)}</p>
+                            )}
+                          </div>
+                        </div>
+                        <Badge
+                          variant={isTop ? "default" : "secondary"}
+                          className={`text-base px-3 py-1 ${isTop ? "bg-yellow-500 hover:bg-yellow-600 text-yellow-950" : ""}`}
+                        >
+                          {score.count}
+                        </Badge>
+                      </div>
+                      {isExpanded && playerDemerits.length > 0 && (
+                        <div className="ml-9 mt-1 space-y-1 mb-2">
+                          {playerDemerits.map((demerit) => (
+                            <div key={demerit._id} className="flex items-center gap-2 p-2 rounded-md bg-muted/30">
+                              {editingDemeritId === demerit._id ? (
+                                <div className="flex items-center gap-2 flex-1">
+                                  <Input
+                                    value={editDemeritReason}
+                                    onChange={(e) => setEditDemeritReason(e.target.value)}
+                                    placeholder="Reason..."
+                                    className="h-7 flex-1 text-sm"
+                                    autoFocus
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") handleUpdateDemerit(demerit._id);
+                                      if (e.key === "Escape") setEditingDemeritId(null);
+                                    }}
+                                  />
+                                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => handleUpdateDemerit(demerit._id)}>
+                                    <Save className="w-3 h-3" />
+                                  </Button>
+                                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setEditingDemeritId(null)}>
+                                    <X className="w-3 h-3" />
+                                  </Button>
+                                </div>
+                              ) : (
+                                <>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm truncate">
+                                      {demerit.reason || <span className="text-muted-foreground italic">No reason given</span>}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {new Date(demerit.timestamp).toLocaleDateString()}{" "}
+                                      {new Date(demerit.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                    </p>
+                                  </div>
+                                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 shrink-0"
+                                    onClick={(e) => { e.stopPropagation(); setEditingDemeritId(demerit._id); setEditDemeritReason(demerit.reason || ""); }}>
+                                    <Edit2 className="w-3 h-3" />
+                                  </Button>
+                                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 shrink-0 hover:bg-destructive hover:text-destructive-foreground"
+                                    onClick={(e) => { e.stopPropagation(); handleDeleteDemerit(demerit._id); }}>
+                                    <Trash2 className="w-3 h-3" />
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                No demerits yet. Everyone&apos;s being good... for now.
+              </p>
+            )}
+          </CardContent>
         </Card>
 
         {/* Custom Spell Creation */}
