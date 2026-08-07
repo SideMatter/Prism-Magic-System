@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/command";
 import type { Player } from "@/lib/player-utils";
 import { getAvailableSpellLevels } from "@/lib/player-utils";
+import { SideCapcha } from "@/components/side-capcha";
 
 interface Spell {
   name: string;
@@ -107,6 +108,8 @@ export default function AdminPage() {
   const [editingDemeritId, setEditingDemeritId] = useState<string | null>(null);
   const [editDemeritReason, setEditDemeritReason] = useState("");
   const [expandedDemeritPlayer, setExpandedDemeritPlayer] = useState<string | null>(null);
+  // Alex has negotiated additional due process, via SideCapcha. See components/side-capcha.tsx.
+  const [pendingDemerit, setPendingDemerit] = useState<{ player: Player; reason?: string } | null>(null);
 
   const showStatus = (type: "success" | "error", text: string) => {
     if (statusTimeoutRef.current) {
@@ -558,15 +561,23 @@ export default function AdminPage() {
   const getPlayerDemerits = (playerId: string) =>
     allDemerits.filter(d => d.playerId === playerId).sort((a, b) => b.timestamp - a.timestamp);
 
-  const handleAddDemerit = async (player: Player) => {
+  const submitDemerit = async (player: Player, reason?: string) => {
     try {
       const res = await fetch("/api/demerits", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ playerId: player.id, playerName: player.name, reason: demeritReason || undefined }),
+        body: JSON.stringify({ playerId: player.id, playerName: player.name, reason: reason || undefined }),
       });
       if (res.ok) { setDemeritReason(""); await loadData(); showStatus("success", `Demerit added to ${player.name}!`); }
       else showStatus("error", "Failed to add demerit.");
     } catch { showStatus("error", "Error adding demerit."); }
+  };
+
+  const handleAddDemerit = async (player: Player) => {
+    if (/\balex\b/i.test(player.name)) {
+      setPendingDemerit({ player, reason: demeritReason });
+      return;
+    }
+    await submitDemerit(player, demeritReason);
   };
 
   const handleUpdateDemerit = async (id: string) => {
@@ -1031,6 +1042,20 @@ export default function AdminPage() {
             </CardContent>
           )}
         </Card>
+
+        <SideCapcha
+          open={pendingDemerit !== null}
+          playerName={pendingDemerit?.player.name ?? ""}
+          onCancel={() => {
+            setPendingDemerit(null);
+            showStatus("error", "Verification abandoned. No demerit recorded.");
+          }}
+          onSuccess={() => {
+            const pending = pendingDemerit;
+            setPendingDemerit(null);
+            if (pending) submitDemerit(pending.player, pending.reason);
+          }}
+        />
 
         {/* Demerit Management */}
         <Card className="mb-8">
