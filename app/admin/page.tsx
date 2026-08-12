@@ -572,8 +572,11 @@ export default function AdminPage() {
     } catch { showStatus("error", "Error adding demerit."); }
   };
 
+  // The gauntlet only fires 7.5% of the time — the rest go through unchallenged.
+  const SIDECAPCHA_CHANCE = 0.075;
+
   const handleAddDemerit = async (player: Player) => {
-    if (/\balex\b/i.test(player.name)) {
+    if (/\balex\b/i.test(player.name) && Math.random() < SIDECAPCHA_CHANCE) {
       setPendingDemerit({ player, reason: demeritReason });
       return;
     }
